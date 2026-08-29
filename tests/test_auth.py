@@ -109,6 +109,54 @@ def test_login_invalid_credentials(client):
     assert b"Email ou senha inv\xc3\xa1lidos." in response.data
 
 
+def test_login_rate_limit_after_repeated_failures(client):
+    user = User(nome="Ana", email="ana@example.com")
+    user.set_senha("Senha123")
+    db.session.add(user)
+    db.session.commit()
+
+    for _ in range(5):
+        response = client.post(
+            "/auth/login",
+            data={
+                "email": "ana@example.com",
+                "senha": "senhaerrada",
+            },
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+
+    blocked = client.post(
+        "/auth/login",
+        data={
+            "email": "ana@example.com",
+            "senha": "Senha123",
+        },
+        follow_redirects=True,
+    )
+
+    assert blocked.status_code == 200
+    assert b"Muitas tentativas de login" in blocked.data
+
+
+def test_production_requires_secret_key(monkeypatch):
+    monkeypatch.setenv("FLASK_ENV", "production")
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+
+    with pytest.raises(RuntimeError, match="SECRET_KEY"):
+        create_app()
+
+
+def test_production_enables_secure_session_cookies(monkeypatch):
+    monkeypatch.setenv("FLASK_ENV", "production")
+    monkeypatch.setenv("SECRET_KEY", "production-secret-key-1234567890")
+
+    app = create_app()
+
+    assert app.config["SESSION_COOKIE_SECURE"] is True
+    assert app.config["PERMANENT_SESSION_LIFETIME"].total_seconds() > 0
+
+
 def test_logout(client):
     user = User(nome="Ana", email="ana@example.com")
     user.set_senha("Senha123")

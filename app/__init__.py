@@ -1,6 +1,7 @@
 import logging
 import os
 import sqlite3
+from datetime import timedelta
 from logging.handlers import RotatingFileHandler
 
 from flask import Flask, request
@@ -27,7 +28,8 @@ def resolve_database_uri():
 
 
 class Config:
-    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-fallback-key")
+    env_name = (os.environ.get("FLASK_ENV") or "development").lower()
+    SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-fallback-key"
     SQLALCHEMY_DATABASE_URI = resolve_database_uri()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SESSION_COOKIE_HTTPONLY = True
@@ -35,7 +37,42 @@ class Config:
     SESSION_COOKIE_SECURE = False
     WTF_CSRF_TIME_LIMIT = 3600
     JSON_SORT_KEYS = False
-    PREFERRED_URL_SCHEME = "https" if os.environ.get("FLASK_ENV") == "production" else "http"
+    PREFERRED_URL_SCHEME = "https" if env_name == "production" else "http"
+
+
+def build_config(config_name=None):
+    env_name = (os.environ.get("FLASK_ENV") or "development").lower()
+    secret_key = os.environ.get("SECRET_KEY")
+    if not secret_key:
+        if env_name == "production":
+            raise RuntimeError("SECRET_KEY is required when FLASK_ENV is set to production.")
+        secret_key = "dev-fallback-key"
+
+    config = {
+        "SECRET_KEY": secret_key,
+        "SQLALCHEMY_DATABASE_URI": resolve_database_uri(),
+        "SQLALCHEMY_TRACK_MODIFICATIONS": False,
+        "SESSION_COOKIE_HTTPONLY": True,
+        "SESSION_COOKIE_SAMESITE": "Lax",
+        "SESSION_COOKIE_SECURE": env_name == "production" or os.environ.get("SESSION_COOKIE_SECURE", "").lower() in {"1", "true", "yes", "on"},
+        "REMEMBER_COOKIE_SECURE": env_name == "production" or os.environ.get("SESSION_COOKIE_SECURE", "").lower() in {"1", "true", "yes", "on"},
+        "REMEMBER_COOKIE_HTTPONLY": True,
+        "REMEMBER_COOKIE_SAMESITE": "Lax",
+        "PERMANENT_SESSION_LIFETIME": timedelta(minutes=30),
+        "SESSION_REFRESH_EACH_REQUEST": True,
+        "WTF_CSRF_TIME_LIMIT": 3600,
+        "JSON_SORT_KEYS": False,
+        "PREFERRED_URL_SCHEME": "https" if env_name == "production" else "http",
+    }
+
+    if config_name == "testing":
+        config.update({
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "WTF_CSRF_ENABLED": False,
+        })
+
+    return config
 
 
 class TestingConfig(Config):
@@ -72,10 +109,7 @@ def migrate_legacy_database(app):
 
 def create_app(config_name=None):
     app = Flask(__name__)
-    app.config.from_object(Config)
-
-    if config_name == "testing":
-        app.config.from_object(TestingConfig)
+    app.config.from_mapping(build_config(config_name))
 
     db.init_app(app)
     login_manager.init_app(app)
@@ -100,6 +134,10 @@ def create_app(config_name=None):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+        response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self' https://cdn.jsdelivr.net; "
@@ -109,6 +147,10 @@ def create_app(config_name=None):
             "connect-src 'self'; "
             "frame-ancestors 'none'"
         )
+        if not app.config.get("TESTING") and request.is_secure:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        else:
+            response.headers["Strict-Transport-Security"] = "max-age=0"
         return response
 
     from app.auth import auth_bp

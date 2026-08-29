@@ -1,10 +1,45 @@
-from flask import current_app, flash, redirect, render_template, request, url_for
+import time
+from collections import defaultdict
+
+from flask import current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 
 from app.auth import auth_bp
 from app.auth.forms import ChangePasswordForm, LoginForm, ProfileForm, RegistrationForm
 from app.extensions import db
 from app.models import User
+
+MAX_FAILED_ATTEMPTS = 5
+LOCK_WINDOW_SECONDS = 300
+
+
+def _get_failed_login_store():
+    store = current_app.config.setdefault("_failed_login_attempts", defaultdict(list))
+    return store
+
+
+def _prune_attempts(attempts):
+    current_time = time.time()
+    return [timestamp for timestamp in attempts if current_time - timestamp < LOCK_WINDOW_SECONDS]
+
+
+def _is_locked(key):
+    store = _get_failed_login_store()
+    attempts = _prune_attempts(store.get(key, []))
+    store[key] = attempts
+    return len(attempts) >= MAX_FAILED_ATTEMPTS
+
+
+def _register_failed_attempt(key):
+    store = _get_failed_login_store()
+    attempts = _prune_attempts(store.get(key, []))
+    attempts.append(time.time())
+    store[key] = attempts
+
+
+def _clear_failed_attempts(key):
+    store = _get_failed_login_store()
+    store.pop(key, None)
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
@@ -42,15 +77,28 @@ def login():
         return redirect(url_for("main.dashboard"))
 
     form = LoginForm()
+    email = (form.email.data or "").strip().lower()
+    remote_ip = request.remote_addr or "unknown"
+
+    if _is_locked(remote_ip) or _is_locked(email):
+        flash("Muitas tentativas de login. Tente novamente em alguns minutos.", "warning")
+        return render_template("auth/login.html", form=form)
+
     if form.validate_on_submit():
         email = form.email.data.strip().lower()
         user = User.query.filter_by(email=email).first()
         if user and user.check_senha(form.senha.data):
-            login_user(user)
+            _clear_failed_attempts(remote_ip)
+            _clear_failed_attempts(email)
+            login_user(user, remember=True)
+            session.permanent = True
             current_app.logger.info(f"User logged in: {email}")
             flash("Bem-vindo de volta!", "success")
             return redirect(url_for("main.dashboard"))
+
         current_app.logger.warning(f"Failed login attempt for: {email}")
+        _register_failed_attempt(remote_ip)
+        _register_failed_attempt(email)
         flash("Email ou senha inválidos.", "danger")
 
     return render_template("auth/login.html", form=form)
@@ -61,6 +109,7 @@ def login():
 def logout():
     email = current_user.email
     logout_user()
+    session.clear()
     current_app.logger.info(f"User logged out: {email}")
     flash("Você saiu da conta.", "info")
     return redirect(url_for("auth.login"))
