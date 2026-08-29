@@ -1,10 +1,12 @@
 from datetime import date
-from flask import render_template, redirect, url_for, flash, request
-from flask_login import login_required, current_user
-from app import db
+
+from flask import flash, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
+
+from app.extensions import db
+from app.models import Subject, Task
 from app.tasks import tasks_bp
 from app.tasks.forms import TaskForm
-from app.models import Task, Subject
 
 
 @tasks_bp.route("/")

@@ -1,9 +1,10 @@
-from flask import render_template, redirect, url_for, flash
-from flask_login import login_required, current_user
-from app import db
+from flask import flash, redirect, render_template, url_for
+from flask_login import current_user, login_required
+
+from app.extensions import db
+from app.models import Subject
 from app.subjects import subjects_bp
 from app.subjects.forms import SubjectForm
-from app.models import Subject
 
 
 @subjects_bp.route("/")

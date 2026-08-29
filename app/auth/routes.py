@@ -1,8 +1,9 @@
-from flask import render_template, redirect, url_for, flash, current_app, request
-from flask_login import login_user, logout_user, login_required, current_user
-from app import db
+from flask import current_app, flash, redirect, render_template, request, url_for
+from flask_login import current_user, login_required, login_user, logout_user
+
 from app.auth import auth_bp
-from app.auth.forms import RegistrationForm, LoginForm, ProfileForm, ChangePasswordForm
+from app.auth.forms import ChangePasswordForm, LoginForm, ProfileForm, RegistrationForm
+from app.extensions import db
 from app.models import User
 
 
