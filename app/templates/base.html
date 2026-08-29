@@ -8,9 +8,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <nav class="navbar navbar-expand-lg navbar-dark main-navbar">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="{{ url_for('main.dashboard') }}">PlanejaENEM</a>
+            <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('main.dashboard') }}">
+                <span class="brand-mark">P</span>
+                <span>PlanejaENEM</span>
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -27,12 +30,15 @@
                         <a class="nav-link" href="{{ url_for('tasks.list_tasks') }}">Tarefas</a>
                     </li>
                 </ul>
-                <ul class="navbar-nav">
+                <ul class="navbar-nav align-items-lg-center">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('auth.profile') }}">{{ current_user.nome }}</a>
+                        <a class="nav-link user-pill" href="{{ url_for('auth.profile') }}">
+                            <span class="user-pill__icon">{{ current_user.nome[:1] | upper }}</span>
+                            {{ current_user.nome }}
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('auth.logout') }}">Sair</a>
+                        <a class="nav-link nav-logout" href="{{ url_for('auth.logout') }}">Sair</a>
                     </li>
                 </ul>
                 {% else %}
@@ -41,7 +47,7 @@
                         <a class="nav-link" href="{{ url_for('auth.login') }}">Entrar</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('auth.register') }}">Registrar</a>
+                        <a class="btn btn-light btn-sm nav-register" href="{{ url_for('auth.register') }}">Registrar</a>
                     </li>
                 </ul>
                 {% endif %}
@@ -49,11 +55,11 @@
         </div>
     </nav>
 
-    <div class="container">
+    <div class="container app-shell">
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         {% for category, message in messages %}
-        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+        <div class="alert alert-{{ category }} alert-dismissible fade show app-alert" role="alert">
             {{ message }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>

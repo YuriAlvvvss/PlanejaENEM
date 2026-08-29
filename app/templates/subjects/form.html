@@ -2,32 +2,38 @@
 {% block title %}{{ title }} - PlanejaENEM{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <h2 class="mb-4">{{ title }}</h2>
-        <form method="POST">
-            {{ form.hidden_tag() }}
-            <div class="mb-3">
-                <label class="form-label">{{ form.nome.label }}</label>
-                {{ form.nome(class="form-control", placeholder="Ex: Matematica, Portugues...") }}
-                {% for error in form.nome.errors %}
-                <div class="text-danger small">{{ error }}</div>
-                {% endfor %}
+<div class="auth-shell">
+    <div class="auth-card card" style="max-width: 620px;">
+        <div class="card-body">
+            <div class="text-center mb-4">
+                <div class="eyebrow">Matéria</div>
+                <h3>{{ title }}</h3>
             </div>
-            <div class="mb-3">
-                <label class="form-label">{{ form.cor.label }}</label>
-                <div class="input-group">
-                    {{ form.cor(class="form-control", placeholder="#007bff", type="color", style="height: 50px; padding: 5px;") }}
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="mb-3">
+                    <label class="form-label">{{ form.nome.label }}</label>
+                    {{ form.nome(class="form-control", placeholder="Ex: Matemática, Português...") }}
+                    {% for error in form.nome.errors %}
+                    <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
                 </div>
-                {% for error in form.cor.errors %}
-                <div class="text-danger small">{{ error }}</div>
-                {% endfor %}
-            </div>
-            <div class="d-flex gap-2">
-                {{ form.submit(class="btn btn-primary") }}
-                <a href="{{ url_for('subjects.list_subjects') }}" class="btn btn-secondary">Cancelar</a>
-            </div>
-        </form>
+                <div class="mb-3">
+                    <label class="form-label">{{ form.cor.label }}</label>
+                    <div class="input-group align-items-center gap-3">
+                        {{ form.cor(class="form-control", placeholder="#007bff", type="color", style="height: 52px; padding: 6px; min-width: 70px; width: 90px;") }}
+                        <span class="text-soft small">Escolha uma cor para identificar a matéria.</span>
+                    </div>
+                    {% for error in form.cor.errors %}
+                    <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="d-flex gap-2 mt-4">
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a href="{{ url_for('subjects.list_subjects') }}" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 {% endblock %}

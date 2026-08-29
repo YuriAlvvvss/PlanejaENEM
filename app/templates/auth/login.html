@@ -2,35 +2,36 @@
 {% block title %}Entrar - PlanejaENEM{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-5">
-        <div class="card">
-            <div class="card-body">
-                <h3 class="card-title text-center mb-4">Entrar</h3>
-                <form method="POST">
-                    {{ form.hidden_tag() }}
-                    <div class="mb-3">
-                        <label class="form-label">{{ form.email.label }}</label>
-                        {{ form.email(class="form-control", placeholder="seu@email.com") }}
-                        {% for error in form.email.errors %}
-                        <div class="text-danger small">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">{{ form.senha.label }}</label>
-                        {{ form.senha(class="form-control", placeholder="Sua senha") }}
-                        {% for error in form.senha.errors %}
-                        <div class="text-danger small">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    <div class="d-grid">
-                        {{ form.submit(class="btn btn-primary") }}
-                    </div>
-                </form>
-                <p class="text-center mt-3">
-                    Não tem conta? <a href="{{ url_for('auth.register') }}">Registre-se</a>
-                </p>
+<div class="auth-shell">
+    <div class="auth-card card">
+        <div class="card-body">
+            <div class="text-center mb-4">
+                <span class="brand-mark d-inline-flex mx-auto mb-3">P</span>
+                <h3>Entrar no PlanejaENEM</h3>
             </div>
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="mb-3">
+                    <label class="form-label">{{ form.email.label }}</label>
+                    {{ form.email(class="form-control", placeholder="seu@email.com") }}
+                    {% for error in form.email.errors %}
+                    <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">{{ form.senha.label }}</label>
+                    {{ form.senha(class="form-control", placeholder="Sua senha") }}
+                    {% for error in form.senha.errors %}
+                    <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="d-grid mt-4">
+                    {{ form.submit(class="btn btn-primary btn-lg") }}
+                </div>
+            </form>
+            <p class="text-center mt-4 mb-0 text-soft">
+                Não tem conta? <a href="{{ url_for('auth.register') }}">Registre-se</a>
+            </p>
         </div>
     </div>
 </div>

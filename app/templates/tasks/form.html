@@ -2,57 +2,62 @@
 {% block title %}{{ title }} - PlanejaENEM{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <h2 class="mb-4">{{ title }}</h2>
-        <form method="POST">
-            {{ form.hidden_tag() }}
-            <div class="mb-3">
-                <label class="form-label">{{ form.titulo.label }}</label>
-                {{ form.titulo(class="form-control", placeholder="Titulo da tarefa") }}
-                {% for error in form.titulo.errors %}
-                <div class="text-danger small">{{ error }}</div>
-                {% endfor %}
+<div class="auth-shell">
+    <div class="auth-card card" style="max-width: 720px;">
+        <div class="card-body">
+            <div class="text-center mb-4">
+                <div class="eyebrow">Tarefa</div>
+                <h3>{{ title }}</h3>
             </div>
-            <div class="mb-3">
-                <label class="form-label">{{ form.descricao.label }}</label>
-                {{ form.descricao(class="form-control", rows="3", placeholder="Descricao opcional") }}
-                {% for error in form.descricao.errors %}
-                <div class="text-danger small">{{ error }}</div>
-                {% endfor %}
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">{{ form.subject_id.label }}</label>
-                    {{ form.subject_id(class="form-select") }}
-                    {% for error in form.subject_id.errors %}
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="mb-3">
+                    <label class="form-label">{{ form.titulo.label }}</label>
+                    {{ form.titulo(class="form-control", placeholder="Título da tarefa") }}
+                    {% for error in form.titulo.errors %}
                     <div class="text-danger small">{{ error }}</div>
                     {% endfor %}
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">{{ form.prioridade.label }}</label>
-                    {{ form.prioridade(class="form-select") }}
-                    {% for error in form.prioridade.errors %}
+                <div class="mb-3">
+                    <label class="form-label">{{ form.descricao.label }}</label>
+                    {{ form.descricao(class="form-control", rows="3", placeholder="Descrição opcional") }}
+                    {% for error in form.descricao.errors %}
                     <div class="text-danger small">{{ error }}</div>
                     {% endfor %}
                 </div>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">{{ form.data_prevista.label }}</label>
-                {{ form.data_prevista(class="form-control", type="date") }}
-                {% for error in form.data_prevista.errors %}
-                <div class="text-danger small">{{ error }}</div>
-                {% endfor %}
-            </div>
-            <div class="mb-3 form-check">
-                {{ form.concluida(class="form-check-input") }}
-                <label class="form-check-label">{{ form.concluida.label }}</label>
-            </div>
-            <div class="d-flex gap-2">
-                {{ form.submit(class="btn btn-primary") }}
-                <a href="{{ url_for('tasks.list_tasks') }}" class="btn btn-secondary">Cancelar</a>
-            </div>
-        </form>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{{ form.subject_id.label }}</label>
+                        {{ form.subject_id(class="form-select") }}
+                        {% for error in form.subject_id.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{{ form.prioridade.label }}</label>
+                        {{ form.prioridade(class="form-select") }}
+                        {% for error in form.prioridade.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">{{ form.data_prevista.label }}</label>
+                    {{ form.data_prevista(class="form-control", type="date") }}
+                    {% for error in form.data_prevista.errors %}
+                    <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="mb-3 form-check">
+                    {{ form.concluida(class="form-check-input") }}
+                    <label class="form-check-label">{{ form.concluida.label }}</label>
+                </div>
+                <div class="d-flex gap-2 mt-4">
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a href="{{ url_for('tasks.list_tasks') }}" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 {% endblock %}

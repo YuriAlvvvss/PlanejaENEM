@@ -4,29 +4,40 @@
 {% block content %}
 <h2 class="mb-4">Dashboard</h2>
 
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card stat-primary">
+            <div class="stat-label">Matérias</div>
+            <div class="stat-value">{{ subjects|length }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-warning">
+            <div class="stat-label">Pendentes</div>
+            <div class="stat-value">{{ pending_tasks|length }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-success">
+            <div class="stat-label">Concluídas</div>
+            <div class="stat-value">{{ completed_tasks }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-danger">
+            <div class="stat-label">Atrasadas</div>
+            <div class="stat-value">{{ overdue_tasks }}</div>
+        </div>
+    </div>
+</div>
+
 <div class="row mb-4">
-    <div class="col-md-4">
-        <div class="card text-bg-primary mb-3">
-            <div class="card-body text-center">
-                <h5 class="card-title">Matérias</h5>
-                <p class="display-6">{{ subjects|length }}</p>
+    <div class="col-md-12">
+        <div class="alert alert-info mb-0 d-flex align-items-center justify-content-between">
+            <div>
+                <strong>Resumo do dia:</strong> {{ todays_tasks }} tarefa(s) para hoje.
             </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card text-bg-warning mb-3">
-            <div class="card-body text-center">
-                <h5 class="card-title">Tarefas Pendentes</h5>
-                <p class="display-6">{{ pending_tasks|length }}</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card text-bg-success mb-3">
-            <div class="card-body text-center">
-                <h5 class="card-title">Hoje</h5>
-                <p class="display-6">{{ today.strftime('%d/%m') }}</p>
-            </div>
+            <span class="badge text-bg-light">{{ today.strftime('%d/%m/%Y') }}</span>
         </div>
     </div>
 </div>
@@ -36,7 +47,7 @@
 <div class="row mb-4">
     {% for subject in subjects %}
     <div class="col-md-4 mb-3">
-        <div class="card">
+        <div class="card dashboard-card">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <span class="badge me-2" style="background-color: {{ subject.cor }}; width: 16px; height: 16px; border-radius: 50%;">&nbsp;</span>
@@ -48,7 +59,7 @@
                         {{ subject.progress_percent }}%
                     </div>
                 </div>
-                <small class="text-muted">{{ subject.completed_tasks }}/{{ subject.total_tasks }} tarefas</small>
+                <small class="text-muted">{{ subject.completed_tasks }}/{{ subject.total_tasks }} tarefas concluídas</small>
             </div>
         </div>
     </div>
@@ -59,7 +70,7 @@
 {% if pending_tasks %}
 <h4 class="mb-3">Tarefas Pendentes</h4>
 <div class="table-responsive">
-    <table class="table table-hover">
+    <table class="table table-hover dashboard-table">
         <thead>
             <tr>
                 <th>Tarefa</th>
@@ -82,7 +93,7 @@
                     {% if task.prioridade == 'alta' %}
                     <span class="badge bg-danger">Alta</span>
                     {% elif task.prioridade == 'media' %}
-                    <span class="badge bg-warning text-dark">Media</span>
+                    <span class="badge bg-warning text-dark">Média</span>
                     {% else %}
                     <span class="badge bg-info">Baixa</span>
                     {% endif %}
@@ -117,13 +128,13 @@
     </table>
 </div>
 {% elif not subjects %}
-<div class="text-center py-5">
+<div class="text-center py-5 empty-state">
     <h5 class="text-muted">Bem-vindo ao PlanejaENEM!</h5>
     <p class="text-muted">Comece criando suas matérias de estudo.</p>
     <a href="{{ url_for('subjects.create') }}" class="btn btn-primary">Criar Primeira Matéria</a>
 </div>
 {% else %}
-<div class="text-center py-5">
+<div class="text-center py-5 empty-state">
     <h5 class="text-muted">Nenhuma tarefa pendente!</h5>
     <p class="text-muted">Tudo em dia. Aproveite para criar novas tarefas.</p>
     <a href="{{ url_for('tasks.create') }}" class="btn btn-primary">Criar Tarefa</a>

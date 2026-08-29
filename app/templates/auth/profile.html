@@ -2,11 +2,18 @@
 {% block title %}Perfil - PlanejaENEM{% endblock %}
 
 {% block content %}
+<div class="page-header">
+    <div>
+        <div class="eyebrow">Conta</div>
+        <h2>Perfil</h2>
+    </div>
+</div>
+
 <div class="row g-4">
     <div class="col-lg-6">
         <div class="card">
             <div class="card-body">
-                <h3 class="card-title mb-4">Perfil</h3>
+                <h3 class="card-title mb-4">Dados pessoais</h3>
                 <form method="POST">
                     {{ profile_form.hidden_tag() }}
                     <div class="mb-3">

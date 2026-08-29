@@ -2,21 +2,20 @@
 {% block title %}Excluir Matéria - PlanejaENEM{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-5">
-        <div class="card border-danger">
-            <div class="card-body text-center">
-                <h4 class="text-danger mb-3">Confirmar Exclusão</h4>
-                <p>Tem certeza que deseja excluir a matéria <strong>{{ subject.nome }}</strong>?</p>
-                <p class="text-muted small">Esta ação não pode ser desfeita.</p>
-                <div class="d-flex justify-content-center gap-2">
-                    <form method="POST">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn btn-danger">Sim, Excluir</button>
-                    </form>
-                    <a href="{{ url_for('subjects.list_subjects') }}" class="btn btn-secondary">Cancelar</a>
-                </div>
-            </div>
+<div class="confirm-card card border-danger">
+    <div class="card-body text-center">
+        <div class="mb-3">
+            <span class="badge bg-danger-subtle text-danger p-2 px-3">Atenção</span>
+        </div>
+        <h4 class="text-danger mb-3">Confirmar exclusão</h4>
+        <p class="mb-2">Tem certeza que deseja excluir a matéria <strong>{{ subject.nome }}</strong>?</p>
+        <p class="text-muted small mb-4">Esta ação não pode ser desfeita.</p>
+        <div class="d-flex justify-content-center gap-2">
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-danger">Sim, excluir</button>
+            </form>
+            <a href="{{ url_for('subjects.list_subjects') }}" class="btn btn-secondary">Cancelar</a>
         </div>
     </div>
 </div>
