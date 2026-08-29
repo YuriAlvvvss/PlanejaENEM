@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Materias - PlanejaENEM{% endblock %}
+{% block title %}Matérias - PlanejaENEM{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Materias</h2>
-    <a href="{{ url_for('subjects.create') }}" class="btn btn-primary">+ Nova Materia</a>
+    <h2>Matérias</h2>
+    <a href="{{ url_for('subjects.create') }}" class="btn btn-primary">+ Nova Matéria</a>
 </div>
 
 {% if subjects %}
@@ -23,7 +23,7 @@
                         {{ subject.progress_percent }}%
                     </div>
                 </div>
-                <small class="text-muted d-block mb-2">{{ subject.completed_tasks }}/{{ subject.total_tasks }} tarefas concluidas</small>
+                <small class="text-muted d-block mb-2">{{ subject.completed_tasks }}/{{ subject.total_tasks }} tarefas concluídas</small>
                 <div class="btn-group btn-group-sm">
                     <a href="{{ url_for('subjects.edit', id=subject.id) }}" class="btn btn-outline-primary">Editar</a>
                     <a href="{{ url_for('subjects.delete', id=subject.id) }}" class="btn btn-outline-danger">Excluir</a>
@@ -35,8 +35,8 @@
 </div>
 {% else %}
 <div class="text-center py-5">
-    <h5 class="text-muted">Nenhuma materia cadastrada</h5>
-    <p class="text-muted">Crie materias para organizar suas tarefas de estudo.</p>
+    <h5 class="text-muted">Nenhuma matéria cadastrada</h5>
+    <p class="text-muted">Crie matérias para organizar suas tarefas de estudo.</p>
 </div>
 {% endif %}
 {% endblock %}

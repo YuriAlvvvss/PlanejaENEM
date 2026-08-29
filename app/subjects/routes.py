@@ -25,10 +25,10 @@ def create():
         )
         db.session.add(subject)
         db.session.commit()
-        flash("Materia criada com sucesso!", "success")
+        flash("Matéria criada com sucesso!", "success")
         return redirect(url_for("subjects.list_subjects"))
 
-    return render_template("subjects/form.html", form=form, title="Nova Materia")
+    return render_template("subjects/form.html", form=form, title="Nova Matéria")
 
 
 @subjects_bp.route("/<int:id>/edit", methods=["GET", "POST"])
@@ -44,10 +44,10 @@ def edit(id):
         subject.nome = form.nome.data
         subject.cor = form.cor.data
         db.session.commit()
-        flash("Materia atualizada!", "success")
+        flash("Matéria atualizada!", "success")
         return redirect(url_for("subjects.list_subjects"))
 
-    return render_template("subjects/form.html", form=form, title="Editar Materia")
+    return render_template("subjects/form.html", form=form, title="Editar Matéria")
 
 
 @subjects_bp.route("/<int:id>/delete", methods=["GET", "POST"])
@@ -60,7 +60,7 @@ def delete(id):
 
     if subject.tasks:
         flash(
-            "Nao e possivel excluir materia com tarefas vinculadas. Remova as tarefas primeiro.",
+            "Não é possível excluir matéria com tarefas vinculadas. Remova as tarefas primeiro.",
             "warning",
         )
         return redirect(url_for("subjects.list_subjects"))
@@ -68,7 +68,7 @@ def delete(id):
     if __import__("flask").request.method == "POST":
         db.session.delete(subject)
         db.session.commit()
-        flash("Materia excluida!", "success")
+        flash("Matéria excluída!", "success")
         return redirect(url_for("subjects.list_subjects"))
 
     return render_template("subjects/confirm_delete.html", subject=subject)

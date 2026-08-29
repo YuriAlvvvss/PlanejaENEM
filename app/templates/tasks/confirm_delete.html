@@ -6,9 +6,9 @@
     <div class="col-md-5">
         <div class="card border-danger">
             <div class="card-body text-center">
-                <h4 class="text-danger mb-3">Confirmar Exclusao</h4>
+                <h4 class="text-danger mb-3">Confirmar Exclusão</h4>
                 <p>Tem certeza que deseja excluir a tarefa <strong>{{ task.titulo }}</strong>?</p>
-                <p class="text-muted small">Esta acao nao pode ser desfeita.</p>
+                <p class="text-muted small">Esta ação não pode ser desfeita.</p>
                 <div class="d-flex justify-content-center gap-2">
                     <form method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

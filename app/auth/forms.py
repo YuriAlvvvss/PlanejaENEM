@@ -11,7 +11,7 @@ class RegistrationForm(FlaskForm):
     )
     confirmar_senha = PasswordField(
         "Confirmar Senha",
-        validators=[DataRequired(), EqualTo("senha", message="As senhas nao conferem.")],
+        validators=[DataRequired(), EqualTo("senha", message="As senhas não conferem.")],
     )
     submit = SubmitField("Registrar")
 

@@ -41,7 +41,7 @@ def list_tasks():
 def create():
     subjects = Subject.query.filter_by(user_id=current_user.id).order_by(Subject.nome).all()
     if not subjects:
-        flash("Crie uma materia antes de adicionar tarefas.", "warning")
+        flash("Crie uma matéria antes de adicionar tarefas.", "warning")
         return redirect(url_for("subjects.create"))
 
     form = TaskForm()
@@ -102,7 +102,7 @@ def delete(id):
     if request.method == "POST":
         db.session.delete(task)
         db.session.commit()
-        flash("Tarefa excluida!", "success")
+        flash("Tarefa excluída!", "success")
         return redirect(url_for("tasks.list_tasks"))
 
     return render_template("tasks/confirm_delete.html", task=task)
@@ -119,6 +119,6 @@ def toggle(id):
     task.concluida = not task.concluida
     db.session.commit()
 
-    status = "concluida" if task.concluida else "reaberta"
+    status = "concluída" if task.concluida else "reaberta"
     flash(f"Tarefa {status}!", "success")
     return redirect(url_for("tasks.list_tasks"))

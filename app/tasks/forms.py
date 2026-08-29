@@ -4,14 +4,14 @@ from wtforms.validators import DataRequired, Length, Optional
 
 
 class TaskForm(FlaskForm):
-    titulo = StringField("Titulo", validators=[DataRequired(), Length(max=200)])
-    descricao = TextAreaField("Descricao", validators=[Optional()])
-    subject_id = SelectField("Materia", coerce=int, validators=[DataRequired()])
+    titulo = StringField("Título", validators=[DataRequired(), Length(max=200)])
+    descricao = TextAreaField("Descrição", validators=[Optional()])
+    subject_id = SelectField("Matéria", coerce=int, validators=[DataRequired()])
     data_prevista = DateField("Data Prevista", validators=[Optional()], format="%Y-%m-%d")
     prioridade = SelectField(
         "Prioridade",
         choices=[("baixa", "Baixa"), ("media", "Media"), ("alta", "Alta")],
         validators=[DataRequired()],
     )
-    concluida = BooleanField("Concluida")
+    concluida = BooleanField("Concluída")
     submit = SubmitField("Salvar")

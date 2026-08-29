@@ -14,14 +14,14 @@ def register():
     form = RegistrationForm()
     if form.validate_on_submit():
         if User.query.filter_by(email=form.email.data).first():
-            flash("Este email ja esta cadastrado.", "danger")
+            flash("Este email já está cadastrado.", "danger")
             return render_template("auth/register.html", form=form)
 
         user = User(nome=form.nome.data, email=form.email.data)
         user.set_senha(form.senha.data)
         db.session.add(user)
         db.session.commit()
-        flash("Conta criada com sucesso! Faca login.", "success")
+        flash("Conta criada com sucesso! Faça login.", "success")
         return redirect(url_for("auth.login"))
 
     return render_template("auth/register.html", form=form)
@@ -39,7 +39,7 @@ def login():
             login_user(user)
             flash("Bem-vindo de volta!", "success")
             return redirect(url_for("main.dashboard"))
-        flash("Email ou senha invalidos.", "danger")
+        flash("Email ou senha inválidos.", "danger")
 
     return render_template("auth/login.html", form=form)
 
@@ -48,5 +48,5 @@ def login():
 @login_required
 def logout():
     logout_user()
-    flash("Voce saiu da conta.", "info")
+    flash("Você saiu da conta.", "info")
     return redirect(url_for("auth.login"))

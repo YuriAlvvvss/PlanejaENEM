@@ -15,11 +15,11 @@
                 <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="all" {% if filter_status == 'all' %}selected{% endif %}>Todas</option>
                     <option value="pending" {% if filter_status == 'pending' %}selected{% endif %}>Pendentes</option>
-                    <option value="done" {% if filter_status == 'done' %}selected{% endif %}>Concluidas</option>
+                    <option value="done" {% if filter_status == 'done' %}selected{% endif %}>Concluídas</option>
                 </select>
             </div>
             <div class="col-md-4">
-                <label class="form-label small">Materia</label>
+                <label class="form-label small">Matéria</label>
                 <select name="subject" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="">Todas</option>
                     {% for subject in subjects %}
@@ -38,10 +38,10 @@
             <tr>
                 <th style="width: 40px;"></th>
                 <th>Tarefa</th>
-                <th>Materia</th>
+                <th>Matéria</th>
                 <th>Prioridade</th>
                 <th>Data Prevista</th>
-                <th>Acoes</th>
+                <th>Ações</th>
             </tr>
         </thead>
         <tbody>
