@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Registrar - PlanejaENEM{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-body">
+                <h3 class="card-title text-center mb-4">Criar Conta</h3>
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.nome.label }}</label>
+                        {{ form.nome(class="form-control", placeholder="Seu nome") }}
+                        {% for error in form.nome.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.email.label }}</label>
+                        {{ form.email(class="form-control", placeholder="seu@email.com") }}
+                        {% for error in form.email.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.senha.label }}</label>
+                        {{ form.senha(class="form-control", placeholder="Minimo 6 caracteres") }}
+                        {% for error in form.senha.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.confirmar_senha.label }}</label>
+                        {{ form.confirmar_senha(class="form-control", placeholder="Repita a senha") }}
+                        {% for error in form.confirmar_senha.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-success") }}
+                    </div>
+                </form>
+                <p class="text-center mt-3">
+                    Ja tem conta? <a href="{{ url_for('auth.login') }}">Entrar</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

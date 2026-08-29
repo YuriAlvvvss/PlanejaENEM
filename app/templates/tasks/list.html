@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Tarefas - PlanejaENEM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Tarefas</h2>
+    <a href="{{ url_for('tasks.create') }}" class="btn btn-primary">+ Nova Tarefa</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small">Status</label>
+                <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="all" {% if filter_status == 'all' %}selected{% endif %}>Todas</option>
+                    <option value="pending" {% if filter_status == 'pending' %}selected{% endif %}>Pendentes</option>
+                    <option value="done" {% if filter_status == 'done' %}selected{% endif %}>Concluidas</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">Materia</label>
+                <select name="subject" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">Todas</option>
+                    {% for subject in subjects %}
+                    <option value="{{ subject.id }}" {% if filter_subject == subject.id %}selected{% endif %}>{{ subject.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if tasks %}
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th style="width: 40px;"></th>
+                <th>Tarefa</th>
+                <th>Materia</th>
+                <th>Prioridade</th>
+                <th>Data Prevista</th>
+                <th>Acoes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+            <tr class="{% if task.concluida %}table-success{% endif %}">
+                <td>
+                    <form method="POST" action="{{ url_for('tasks.toggle', id=task.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm {% if task.concluida %}btn-success{% else %}btn-outline-success{% endif %}" title="{% if task.concluida %}Reabrir{% else %}Concluir{% endif %}">
+                            {% if task.concluida %}&#10003;{% endif %}
+                        </button>
+                    </form>
+                </td>
+                <td class="{% if task.concluida %}text-decoration-line-through{% endif %}">
+                    {{ task.titulo }}
+                    {% if task.descricao %}
+                    <br><small class="text-muted">{{ task.descricao[:80] }}{% if task.descricao|length > 80 %}...{% endif %}</small>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge" style="background-color: {{ task.subject.cor }};">
+                        {{ task.subject.nome }}
+                    </span>
+                </td>
+                <td>
+                    {% if task.prioridade == 'alta' %}
+                    <span class="badge bg-danger">Alta</span>
+                    {% elif task.prioridade == 'media' %}
+                    <span class="badge bg-warning text-dark">Media</span>
+                    {% else %}
+                    <span class="badge bg-info">Baixa</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if task.data_prevista %}
+                        {% if task.data_prevista < today and not task.concluida %}
+                        <span class="text-danger fw-bold">{{ task.data_prevista.strftime('%d/%m/%Y') }}</span>
+                        {% elif task.data_prevista == today %}
+                        <span class="text-warning fw-bold">Hoje</span>
+                        {% else %}
+                        {{ task.data_prevista.strftime('%d/%m/%Y') }}
+                        {% endif %}
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <a href="{{ url_for('tasks.edit', id=task.id) }}" class="btn btn-outline-primary">Editar</a>
+                        <a href="{{ url_for('tasks.delete', id=task.id) }}" class="btn btn-outline-danger">Excluir</a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="text-center py-5">
+    <h5 class="text-muted">Nenhuma tarefa encontrada</h5>
+    <p class="text-muted">Ajuste os filtros ou crie uma nova tarefa.</p>
+</div>
+{% endif %}
+{% endblock %}

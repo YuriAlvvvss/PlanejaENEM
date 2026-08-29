@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Materias - PlanejaENEM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Materias</h2>
+    <a href="{{ url_for('subjects.create') }}" class="btn btn-primary">+ Nova Materia</a>
+</div>
+
+{% if subjects %}
+<div class="row">
+    {% for subject in subjects %}
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <span class="badge me-2" style="background-color: {{ subject.cor }}; width: 20px; height: 20px; border-radius: 50;">&nbsp;</span>
+                    <h5 class="mb-0">{{ subject.nome }}</h5>
+                </div>
+                <div class="progress mb-2">
+                    <div class="progress-bar" role="progressbar"
+                         style="width: {{ subject.progress_percent }}%; background-color: {{ subject.cor }};">
+                        {{ subject.progress_percent }}%
+                    </div>
+                </div>
+                <small class="text-muted d-block mb-2">{{ subject.completed_tasks }}/{{ subject.total_tasks }} tarefas concluidas</small>
+                <div class="btn-group btn-group-sm">
+                    <a href="{{ url_for('subjects.edit', id=subject.id) }}" class="btn btn-outline-primary">Editar</a>
+                    <a href="{{ url_for('subjects.delete', id=subject.id) }}" class="btn btn-outline-danger">Excluir</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <h5 class="text-muted">Nenhuma materia cadastrada</h5>
+    <p class="text-muted">Crie materias para organizar suas tarefas de estudo.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,13 @@
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_APP=run.py
+      - FLASK_ENV=development
+      - SECRET_KEY=change-this-in-production
+      - DATABASE_URL=sqlite:///planejaenem.db
+    volumes:
+      - ./instance:/app/instance
+    restart: unless-stopped
