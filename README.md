@@ -1,22 +1,22 @@
 # PlanejaENEM
 
-Organizador de estudos para o ENEM. Cadastre materias, crie tarefas de estudo e acompanhe seu progresso.
+Organizador de estudos para o ENEM. Cadastre matérias, crie tarefas de estudo e acompanhe seu progresso.
 
 ## Stack
 
 - Python 3.12 + Flask
 - SQLAlchemy + SQLite
-- Flask-Login (autenticacao)
-- Flask-WTF (formularios com CSRF)
+- Flask-Login (autenticação)
+- Flask-WTF (formulários com CSRF)
 - Bootstrap 5 (frontend via CDN)
 - Docker
 
 ## Funcionalidades do MVP
 
-- Registro e login de usuario
-- CRUD de materias (nome + cor)
-- CRUD de tarefas (titulo, descricao, data prevista, prioridade, status)
-- Dashboard com progresso por materia e tarefas pendentes
+- Registro e login de usuário
+- CRUD de matérias (nome + cor)
+- CRUD de tarefas (título, descrição, data prevista, prioridade, status)
+- Dashboard com progresso por matéria e tarefas pendentes
 - Rota `/health` retornando status 200
 
 ## Como rodar local
@@ -27,10 +27,10 @@ python -m venv venv
 venv\Scripts\activate        # Windows
 # source venv/bin/activate   # Linux/Mac
 
-# Instalar dependencias
+# Instalar dependências
 pip install -r requirements.txt
 
-# Criar arquivo .env (ja incluido no repo com valores de dev)
+# Criar arquivo .env (já incluso no repo com valores de dev)
 # SECRET_KEY=change-me-in-production
 
 # Rodar
@@ -54,16 +54,15 @@ PlanejaENEM/
 ├── app/
 │   ├── __init__.py          # Application Factory
 │   ├── models.py            # User, Subject, Task
-│   ├── auth/                # Blueprint de autenticacao
+│   ├── auth/                # Blueprint de autenticação
 │   ├── main/                # Blueprint do dashboard
-│   ├── subjects/            # Blueprint de materias
+│   ├── subjects/            # Blueprint de matérias
 │   └── tasks/               # Blueprint de tarefas
 ├── templates/               # Templates Jinja2
-├── static/                  # CSS estatico
-├── .env                     # Variaveis de ambiente
+├── static/                  # CSS estático
+├── .env                     # Variáveis de ambiente
 ├── .gitignore
 ├── requirements.txt
 ├── run.py                   # Entry point
 ├── Dockerfile
 └── docker-compose.yml
-```
