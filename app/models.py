@@ -35,11 +35,16 @@ def load_user(user_id):
 
 class Subject(db.Model):
     __tablename__ = "subjects"
+    __table_args__ = (
+        db.Index("idx_subject_user_id", "user_id"),
+        db.Index("idx_subject_user_nome", "user_id", "nome"),
+        db.UniqueConstraint("user_id", "nome", name="uq_subject_user_nome"),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False)
     cor = db.Column(db.String(7), nullable=False, default="#007bff")
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     data_criacao = db.Column(
         db.DateTime, default=lambda: datetime.now(timezone.utc)
     )
@@ -67,12 +72,19 @@ class Subject(db.Model):
 
 class Task(db.Model):
     __tablename__ = "tasks"
+    __table_args__ = (
+        db.Index("idx_task_user_id", "user_id"),
+        db.Index("idx_task_subject_id", "subject_id"),
+        db.Index("idx_task_user_concluida", "user_id", "concluida"),
+        db.Index("idx_task_user_data_prevista", "user_id", "data_prevista"),
+        db.Index("idx_task_prioridade", "prioridade"),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     titulo = db.Column(db.String(200), nullable=False)
     descricao = db.Column(db.Text, nullable=True)
-    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     data_prevista = db.Column(db.Date, nullable=True)
     concluida = db.Column(db.Boolean, default=False, nullable=False)
     prioridade = db.Column(

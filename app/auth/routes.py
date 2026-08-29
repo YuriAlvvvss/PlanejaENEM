@@ -1,4 +1,4 @@
-from flask import render_template, redirect, url_for, flash
+from flask import render_template, redirect, url_for, flash, current_app, request
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db
 from app.auth import auth_bp
@@ -15,15 +15,22 @@ def register():
     if form.validate_on_submit():
         email = form.email.data.strip().lower()
         if User.query.filter_by(email=email).first():
+            current_app.logger.warning(f"Registration attempt with existing email: {email}")
             flash("Este email já está cadastrado.", "danger")
             return render_template("auth/register.html", form=form)
 
-        user = User(nome=form.nome.data.strip(), email=email)
-        user.set_senha(form.senha.data)
-        db.session.add(user)
-        db.session.commit()
-        flash("Conta criada com sucesso! Faça login.", "success")
-        return redirect(url_for("auth.login"))
+        try:
+            user = User(nome=form.nome.data.strip(), email=email)
+            user.set_senha(form.senha.data)
+            db.session.add(user)
+            db.session.commit()
+            current_app.logger.info(f"New user registered: {email}")
+            flash("Conta criada com sucesso! Faça login.", "success")
+            return redirect(url_for("auth.login"))
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Registration error for {email}: {str(e)}")
+            flash("Erro ao criar conta. Tente novamente.", "danger")
 
     return render_template("auth/register.html", form=form)
 
@@ -39,8 +46,10 @@ def login():
         user = User.query.filter_by(email=email).first()
         if user and user.check_senha(form.senha.data):
             login_user(user)
+            current_app.logger.info(f"User logged in: {email}")
             flash("Bem-vindo de volta!", "success")
             return redirect(url_for("main.dashboard"))
+        current_app.logger.warning(f"Failed login attempt for: {email}")
         flash("Email ou senha inválidos.", "danger")
 
     return render_template("auth/login.html", form=form)
@@ -49,7 +58,9 @@ def login():
 @auth_bp.route("/logout")
 @login_required
 def logout():
+    email = current_user.email
     logout_user()
+    current_app.logger.info(f"User logged out: {email}")
     flash("Você saiu da conta.", "info")
     return redirect(url_for("auth.login"))
 
