@@ -49,6 +49,62 @@ def test_logging_does_not_create_repo_root_logs():
         shutil.rmtree(logs_dir)
 
 
+def test_database_uri_falls_back_to_local_instance_directory(monkeypatch):
+    """Linux container paths should not break local Windows development startup."""
+    import importlib
+
+    app_module = importlib.import_module("app")
+
+    monkeypatch.setenv("DATABASE_URL", "sqlite:////app/instance/planejaenem.db")
+
+    uri = app_module.resolve_database_uri()
+
+    assert "instance" in uri
+    assert "planejaenem.db" in uri
+    assert "/app/" not in uri
+
+
+def test_database_schema_migration_adds_missing_subject_columns(tmp_path, monkeypatch):
+    """Legacy SQLite databases should gain the newer Subject columns automatically."""
+    import sqlite3
+
+    db_path = tmp_path / "legacy_planejaenem.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            """
+            CREATE TABLE users (
+                id INTEGER PRIMARY KEY,
+                nome VARCHAR(120) NOT NULL,
+                email VARCHAR(120) NOT NULL,
+                senha_hash VARCHAR(256) NOT NULL,
+                data_criacao DATETIME
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE subjects (
+                id INTEGER PRIMARY KEY,
+                nome VARCHAR(100) NOT NULL,
+                cor VARCHAR(7) NOT NULL,
+                user_id INTEGER NOT NULL,
+                data_criacao DATETIME
+            )
+            """
+        )
+        conn.commit()
+
+    app = create_app()
+    with app.app_context():
+        inspector = db.inspect(db.engine)
+        columns = {column["name"] for column in inspector.get_columns("subjects")}
+
+    assert "prioridade" in columns
+    assert "dificuldade" in columns
+
+
 # ==================== AUTH VALIDATION TESTS ====================
 
 def test_register_weak_password_no_uppercase(client):
