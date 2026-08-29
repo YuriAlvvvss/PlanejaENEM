@@ -48,6 +48,10 @@ def create():
     form.subject_id.choices = [(s.id, s.nome) for s in subjects]
 
     if form.validate_on_submit():
+        concluida = form.concluida.data
+        if isinstance(concluida, str):
+            concluida = concluida.strip().lower() not in {"", "false", "0", "no", "n", "off"}
+
         task = Task(
             titulo=form.titulo.data,
             descricao=form.descricao.data,
@@ -55,7 +59,7 @@ def create():
             user_id=current_user.id,
             data_prevista=form.data_prevista.data,
             prioridade=form.prioridade.data,
-            concluida=form.concluida.data,
+            concluida=concluida,
         )
         db.session.add(task)
         db.session.commit()
@@ -75,12 +79,16 @@ def edit(id):
     form.subject_id.choices = [(s.id, s.nome) for s in subjects]
 
     if form.validate_on_submit():
+        concluida = form.concluida.data
+        if isinstance(concluida, str):
+            concluida = concluida.strip().lower() not in {"", "false", "0", "no", "n", "off"}
+
         task.titulo = form.titulo.data
         task.descricao = form.descricao.data
         task.subject_id = form.subject_id.data
         task.data_prevista = form.data_prevista.data
         task.prioridade = form.prioridade.data
-        task.concluida = form.concluida.data
+        task.concluida = concluida
         db.session.commit()
         flash("Tarefa atualizada!", "success")
         return redirect(url_for("tasks.list_tasks"))

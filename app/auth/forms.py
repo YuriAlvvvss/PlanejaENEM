@@ -1,13 +1,28 @@
+import re
+
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
+
+
+def validate_password_strength(form, field):
+    value = field.data or ""
+    if len(value) < 8:
+        raise ValidationError("A senha deve ter pelo menos 8 caracteres.")
+    if not re.search(r"[A-Z]", value):
+        raise ValidationError("A senha deve conter pelo menos uma letra maiúscula.")
+    if not re.search(r"[a-z]", value):
+        raise ValidationError("A senha deve conter pelo menos uma letra minúscula.")
+    if not re.search(r"\d", value):
+        raise ValidationError("A senha deve conter pelo menos um número.")
 
 
 class RegistrationForm(FlaskForm):
     nome = StringField("Nome", validators=[DataRequired(), Length(max=120)])
     email = StringField("Email", validators=[DataRequired(), Email()])
     senha = PasswordField(
-        "Senha", validators=[DataRequired(), Length(min=8, max=128)]
+        "Senha",
+        validators=[DataRequired(), Length(min=8, max=128), validate_password_strength],
     )
     confirmar_senha = PasswordField(
         "Confirmar Senha",
@@ -46,7 +61,8 @@ class ProfileForm(FlaskForm):
 class ChangePasswordForm(FlaskForm):
     senha_atual = PasswordField("Senha atual", validators=[DataRequired()])
     nova_senha = PasswordField(
-        "Nova senha", validators=[DataRequired(), Length(min=8, max=128)]
+        "Nova senha",
+        validators=[DataRequired(), Length(min=8, max=128), validate_password_strength],
     )
     confirmar_nova_senha = PasswordField(
         "Confirmar nova senha",

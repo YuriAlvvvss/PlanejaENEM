@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, TextAreaField, SelectField, DateField, BooleanField, SubmitField
-from wtforms.validators import DataRequired, Length, Optional
+from wtforms.validators import DataRequired, Length, Optional, ValidationError
 
 
 class TaskForm(FlaskForm):
@@ -15,3 +15,8 @@ class TaskForm(FlaskForm):
     )
     concluida = BooleanField("Concluída")
     submit = SubmitField("Salvar")
+
+    def validate_titulo(self, field):
+        field.data = field.data.strip()
+        if not field.data:
+            raise ValidationError("Informe um título válido para a tarefa.")

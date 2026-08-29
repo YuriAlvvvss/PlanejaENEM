@@ -10,6 +10,7 @@ from app.models import Subject, Task
 @login_required
 def dashboard():
     subjects = Subject.query.filter_by(user_id=current_user.id).all()
+    all_tasks = Task.query.filter_by(user_id=current_user.id).all()
 
     pending_tasks = (
         Task.query.filter_by(user_id=current_user.id, concluida=False)
@@ -18,11 +19,25 @@ def dashboard():
     )
 
     today = date.today()
+    completed_tasks = sum(1 for task in all_tasks if task.concluida)
+    overdue_tasks = sum(
+        1
+        for task in all_tasks
+        if (not task.concluida) and task.data_prevista and task.data_prevista < today
+    )
+    todays_tasks = sum(
+        1
+        for task in all_tasks
+        if (not task.concluida) and task.data_prevista == today
+    )
 
     return render_template(
         "dashboard.html",
         subjects=subjects,
         pending_tasks=pending_tasks,
+        completed_tasks=completed_tasks,
+        overdue_tasks=overdue_tasks,
+        todays_tasks=todays_tasks,
         today=today,
     )
 
