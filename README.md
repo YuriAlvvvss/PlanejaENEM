@@ -1,101 +1,105 @@
 # PlanejaENEM
 
-PlanejaENEM é uma aplicação web de organização de estudos para o ENEM, pensada para ajudar estudantes a gerenciar matérias, tarefas de revisão e acompanhamento de progresso.
+PlanejaENEM é uma aplicação web para organização de estudos para o ENEM. O projeto ajuda o aluno a registrar matérias, gerenciar tarefas, acompanhar um dashboard de progresso e gerar um cronograma de estudos com base em disponibilidade semanal, tempo diário e data da prova.
 
 ## Visão geral
 
-O projeto foi estruturado com Flask, utilizando Blueprints para separar as áreas da aplicação e facilitar manutenção, escalabilidade e clareza no código. A aplicação permite:
+A aplicação foi construída com Flask e segue a arquitetura de Application Factory com Blueprints para separar autenticação, dashboard, matérias, tarefas e planejamento. O sistema foi pensado para uso individual por usuário, com armazenamento local em SQLite por padrão.
+
+### Funcionalidades principais
 
 - cadastro e autenticação de usuários
-- gestão de matérias por usuário
-- criação, edição, exclusão e conclusão de tarefas
-- acompanhamento do progresso no dashboard
-- monitoramento básico de saúde da aplicação via rota `/health`
+- login/logout com proteção de rotas autenticadas
+- CRUD de matérias
+- CRUD de tarefas com prioridade, data prevista e status de conclusão
+- dashboard com indicadores de progresso e tarefas pendentes
+- geração de cronograma de estudos por dia e faixa horária
+- edição manual de sessões do cronograma
+- regeneração do plano de estudos
+- monitoramento de saúde da aplicação via rota `/health`
+- logging em `instance/logs`
+- cabeçalhos de segurança básicos e proteção CSRF
 
 ## Stack
 
 - Python 3.12
-- Flask 3.x
-- SQLAlchemy
-- Flask-Login
-- Flask-WTF
-- SQLite (ambiente local/dev)
-- Bootstrap 5
-- Docker
-- pytest
-
-## Funcionalidades
-
-- Registro de conta com validação de senha
-- Login e logout com proteção de rotas autenticadas
-- CRUD de matérias
-- CRUD de tarefas com prioridade, data prevista e status
-- Dashboard com indicadores de progresso
-- Filtros de tarefas por status e matéria
-- Proteção CSRF e cabeçalhos de segurança básicos
-- Logs em arquivo dentro de `instance/logs`
+- Flask 3.1.1
+- Flask-SQLAlchemy 3.1.1
+- Flask-Login 0.6.3
+- Flask-WTF 1.2.2
+- WTForms 3.2.1
+- SQLite
+- Bootstrap 5 (via templates)
+- Docker / Docker Compose
+- pytest 8
 
 ## Estrutura do projeto
 
 ```text
 PlanejaENEM/
 ├── app/
-│   ├── __init__.py          # Factory da aplicação e configuração geral
-│   ├── extensions.py        # Extensões do Flask (db, login_manager, csrf)
-│   ├── models.py            # Modelos: User, Subject e Task
+│   ├── __init__.py            # Factory da aplicação e configuração
+│   ├── extensions.py          # db, login_manager e csrf
+│   ├── models.py              # User, Subject, Task, StudyPlan e StudySession
 │   ├── auth/
-│   │   ├── __init__.py      # Blueprint de autenticação
-│   │   ├── forms.py         # Formulários de autenticação e perfil
-│   │   └── routes.py        # Rotas de login, registro, logout e perfil
+│   │   ├── __init__.py        # Blueprint de autenticação
+│   │   ├── forms.py           # Formulários de registro, login e perfil
+│   │   └── routes.py          # login, logout, cadastro e perfil
 │   ├── main/
-│   │   ├── __init__.py      # Blueprint principal
-│   │   └── routes.py        # Dashboard e health check
+│   │   ├── __init__.py        # Blueprint principal
+│   │   └── routes.py          # dashboard e health check
+│   ├── planner/
+│   │   ├── __init__.py        # Blueprint do planejamento
+│   │   └── routes.py          # geração e regeneração do cronograma
 │   ├── subjects/
-│   │   ├── __init__.py      # Blueprint de matérias
-│   │   ├── forms.py         # Formulário de matéria
-│   │   └── routes.py        # CRUD de matérias
+│   │   ├── __init__.py        # Blueprint de matérias
+│   │   ├── forms.py           # Formulário de matéria
+│   │   └── routes.py          # CRUD de matérias
 │   ├── tasks/
-│   │   ├── __init__.py      # Blueprint de tarefas
-│   │   ├── forms.py         # Formulário de tarefa
-│   │   └── routes.py        # CRUD e toggle de tarefas
+│   │   ├── __init__.py        # Blueprint de tarefas
+│   │   ├── forms.py           # Formulário de tarefa
+│   │   └── routes.py          # CRUD e toggle de tarefas
 │   ├── static/
-│   │   └── style.css        # Estilos do projeto
+│   │   └── style.css          # Estilos da interface
 │   └── templates/
 │       ├── base.html
 │       ├── dashboard.html
 │       ├── auth/
+│       ├── planner/
 │       ├── subjects/
 │       └── tasks/
 ├── instance/
-│   └── logs/                # Logs gerados em execução
+│   ├── logs/                  # arquivos de log em execução
+│   └── planejaenem.db         # banco SQLite padrão
 ├── tests/
 │   ├── test_auth.py
+│   ├── test_planner.py
 │   └── test_phase2_quality.py
-├── .env                     # Variáveis de ambiente locais
 ├── .gitignore
 ├── Dockerfile
 ├── docker-compose.yml
 ├── README.md
 ├── requirements.txt
-├── run.py                   # Ponto de entrada da aplicação
-└── venv/                    # Ambiente virtual local
+├── run.py                     # entrypoint da aplicação
+└── .env                       # opcional para variáveis locais
 ```
 
-## Pré-requisitos
+## Requisitos
 
 - Python 3.12
 - pip
-- Docker e Docker Compose (opcional, para execução em container)
+- Docker e Docker Compose (opcional)
 
 ## Configuração local
 
-1. Clone o repositório
-2. Crie um ambiente virtual
-3. Instale as dependências
-4. Configure as variáveis de ambiente
-5. Execute a aplicação
+### 1) Clonar o repositório
 
-### 1) Criar ambiente virtual
+```bash
+git clone <url-do-repositorio>
+cd PlanejaENEM
+```
+
+### 2) Criar ambiente virtual
 
 ```bash
 python -m venv venv
@@ -113,24 +117,23 @@ Linux/macOS:
 source venv/bin/activate
 ```
 
-### 2) Instalar dependências
+### 3) Instalar dependências
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3) Configurar variáveis de ambiente
+### 4) Configurar variáveis de ambiente
 
-Crie um arquivo `.env` na raiz com pelo menos:
+O projeto usa valores padrão caso `.env` não exista, mas você pode criar uma variável local opcional:
 
 ```env
 SECRET_KEY=sua-chave-secreta
 FLASK_ENV=development
+DATABASE_URL=sqlite:////caminho/para/instance/planejaenem.db
 ```
 
-> Em ambiente de desenvolvimento, a aplicação usa valores padrão quando a variável não for informada.
-
-### 4) Executar a aplicação
+### 5) Executar a aplicação
 
 ```bash
 python run.py
@@ -156,35 +159,32 @@ http://localhost:5000
 
 ## Testes
 
-Para rodar a suíte de testes:
+Para executar a suíte de testes:
 
 ```bash
 python -m pytest -q
 ```
 
-Ou, se estiver usando o ambiente virtual:
+## Fluxo principal da aplicação
 
-```bash
-venv\Scripts\python -m pytest -q
-```
+1. O usuário cria uma conta e faz login.
+2. Adiciona matérias e prioridades/dificuldades para cada disciplina.
+3. Cria tarefas de estudo com data prevista e nível de prioridade.
+4. Acesse o módulo de planejamento e configure:
+   - dias disponíveis
+   - horários disponíveis
+   - tempo diário de estudo
+   - data da prova
+5. O sistema gera sessões de estudo distribuídas ao longo do período.
+6. O dashboard exibe métricas de progresso, tarefas pendentes e próximas entregas.
 
-## Boas práticas aplicadas
+## Observações importantes
 
-- uso de Application Factory
-- separação por Blueprints
-- organização de extensões em módulo próprio
-- logging configurado fora da raiz do projeto
-- proteção de rotas com login obrigatório
-- validações de formulários com WTForms
-- uso de diretórios dedicados para logs e instância
-- configuração de segurança básica via headers HTTP
-
-## Observações
-
-- O banco local é gerado automaticamente pela aplicação no contexto do Flask.
-- O diretório `instance/logs` é usado para armazenar arquivos de log em execução.
-- O projeto foi pensado para evoluir com padrões mais organizados e fáceis de manter.
+- O banco usa SQLite por padrão em `instance/planejaenem.db`.
+- Os logs da aplicação são gravados em `instance/logs/planejaenem.log`.
+- A rota `/health` responde com status `ok` para verificação simples de disponibilidade.
+- A aplicação foi validada com testes automatizados e a suíte atual está passando.
 
 ## Status
 
-Aplicação funcional e validada por testes automatizados em ambiente local.
+Aplicação funcional, com autenticação, gestão de estudos, dashboard e planejamento de cronograma implementados e validados por testes.
