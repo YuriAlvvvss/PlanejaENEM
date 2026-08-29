@@ -7,31 +7,33 @@
         <div class="card-body">
             <div class="text-center mb-4">
                 <span class="brand-mark d-inline-flex mx-auto mb-3">P</span>
-                <h3>Entrar no PlanejaENEM</h3>
+                <h3 class="mb-1">Bem-vindo de volta!</h3>
+                <p class="text-muted mb-0">Acesse sua conta para continuar.</p>
             </div>
-            <form method="POST">
+            <form method="POST" novalidate>
                 {{ form.hidden_tag() }}
                 <div class="mb-3">
                     <label class="form-label">{{ form.email.label }}</label>
-                    {{ form.email(class="form-control", placeholder="seu@email.com") }}
-                    {% for error in form.email.errors %}
-                    <div class="text-danger small">{{ error }}</div>
-                    {% endfor %}
+                    {{ form.email(class="form-control is-invalid" if form.email.errors else "form-control", placeholder="seu@email.com") }}
+                    {% if form.email.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.email.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
-                <div class="mb-3">
+                <div class="mb-4">
                     <label class="form-label">{{ form.senha.label }}</label>
-                    {{ form.senha(class="form-control", placeholder="Sua senha") }}
-                    {% for error in form.senha.errors %}
-                    <div class="text-danger small">{{ error }}</div>
-                    {% endfor %}
+                    {{ form.senha(class="form-control is-invalid" if form.senha.errors else "form-control", placeholder="Sua senha") }}
+                    {% if form.senha.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.senha.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
-                <div class="d-grid mt-4">
-                    {{ form.submit(class="btn btn-primary btn-lg") }}
+                {{ form.submit(class="btn btn-primary w-100 mb-2", value="Entrar") }}
+                <div class="text-center text-muted small">
+                    Não tem conta? <a href="{{ url_for('auth.register') }}" class="link-primary">Registre-se</a>
                 </div>
-            </form>
-            <p class="text-center mt-4 mb-0 text-soft">
-                Não tem conta? <a href="{{ url_for('auth.register') }}">Registre-se</a>
-            </p>
         </div>
     </div>
 </div>

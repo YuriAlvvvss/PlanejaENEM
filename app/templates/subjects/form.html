@@ -13,20 +13,24 @@
                 {{ form.hidden_tag() }}
                 <div class="mb-3">
                     <label class="form-label">{{ form.nome.label }}</label>
-                    {{ form.nome(class="form-control", placeholder="Ex: Matemática, Português...") }}
-                    {% for error in form.nome.errors %}
-                    <div class="text-danger small">{{ error }}</div>
-                    {% endfor %}
+                    {{ form.nome(class="form-control" + (" is-invalid" if form.nome.errors else ""), placeholder="Ex: Matemática, Português...") }}
+                    {% if form.nome.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.nome.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="mb-3">
                     <label class="form-label">{{ form.cor.label }}</label>
                     <div class="input-group align-items-center gap-3">
-                        {{ form.cor(class="form-control", placeholder="#007bff", type="color", style="height: 52px; padding: 6px; min-width: 70px; width: 90px;") }}
+                        {{ form.cor(class="form-control" + (" is-invalid" if form.cor.errors else ""), placeholder="#007bff", type="color", style="height: 52px; padding: 6px; min-width: 70px; width: 90px;") }}
                         <span class="text-soft small">Escolha uma cor para identificar a matéria.</span>
                     </div>
-                    {% for error in form.cor.errors %}
-                    <div class="text-danger small">{{ error }}</div>
-                    {% endfor %}
+                    {% if form.cor.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.cor.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="d-flex gap-2 mt-4">
                     {{ form.submit(class="btn btn-primary") }}

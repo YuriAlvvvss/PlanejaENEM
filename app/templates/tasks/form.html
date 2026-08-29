@@ -13,40 +13,50 @@
                 {{ form.hidden_tag() }}
                 <div class="mb-3">
                     <label class="form-label">{{ form.titulo.label }}</label>
-                    {{ form.titulo(class="form-control", placeholder="Título da tarefa") }}
-                    {% for error in form.titulo.errors %}
-                    <div class="text-danger small">{{ error }}</div>
-                    {% endfor %}
+                    {{ form.titulo(class="form-control" + (" is-invalid" if form.titulo.errors else ""), placeholder="Título da tarefa") }}
+                    {% if form.titulo.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.titulo.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="mb-3">
                     <label class="form-label">{{ form.descricao.label }}</label>
-                    {{ form.descricao(class="form-control", rows="3", placeholder="Descrição opcional") }}
-                    {% for error in form.descricao.errors %}
-                    <div class="text-danger small">{{ error }}</div>
-                    {% endfor %}
+                    {{ form.descricao(class="form-control" + (" is-invalid" if form.descricao.errors else ""), rows="3", placeholder="Descrição opcional") }}
+                    {% if form.descricao.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.descricao.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label">{{ form.subject_id.label }}</label>
-                        {{ form.subject_id(class="form-select") }}
-                        {% for error in form.subject_id.errors %}
-                        <div class="text-danger small">{{ error }}</div>
-                        {% endfor %}
+                        {{ form.subject_id(class="form-select" + (" is-invalid" if form.subject_id.errors else "")) }}
+                        {% if form.subject_id.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.subject_id.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label">{{ form.prioridade.label }}</label>
-                        {{ form.prioridade(class="form-select") }}
-                        {% for error in form.prioridade.errors %}
-                        <div class="text-danger small">{{ error }}</div>
-                        {% endfor %}
+                        {{ form.prioridade(class="form-select" + (" is-invalid" if form.prioridade.errors else "")) }}
+                        {% if form.prioridade.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.prioridade.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">{{ form.data_prevista.label }}</label>
-                    {{ form.data_prevista(class="form-control", type="date") }}
-                    {% for error in form.data_prevista.errors %}
-                    <div class="text-danger small">{{ error }}</div>
-                    {% endfor %}
+                    {{ form.data_prevista(class="form-control" + (" is-invalid" if form.data_prevista.errors else ""), type="date") }}
+                    {% if form.data_prevista.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.data_prevista.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="mb-3 form-check">
                     {{ form.concluida(class="form-check-input") }}
