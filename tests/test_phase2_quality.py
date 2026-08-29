@@ -2,7 +2,10 @@
 Phase 2: Quality, Security, and Performance Tests
 Expanded coverage for edge cases, validation, and business logic
 """
+import shutil
 from datetime import date
+from pathlib import Path
+
 import pytest
 from app import create_app, db
 from app.models import User, Subject, Task
@@ -30,6 +33,20 @@ def login(client, email="ana@example.com", password="Senha123"):
         data={"email": email, "senha": password},
         follow_redirects=True,
     )
+
+
+def test_logging_does_not_create_repo_root_logs():
+    """Application logging must not create files in the project root."""
+    project_root = Path(__file__).resolve().parents[1]
+    logs_dir = project_root / "logs"
+    if logs_dir.exists():
+        shutil.rmtree(logs_dir)
+
+    create_app()
+
+    assert not logs_dir.exists()
+    if logs_dir.exists():
+        shutil.rmtree(logs_dir)
 
 
 # ==================== AUTH VALIDATION TESTS ====================

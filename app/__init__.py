@@ -94,16 +94,26 @@ def create_app(config_name=None):
 
 
 def setup_logging(app):
-    """Configure application logging"""
-    if not app.config.get("TESTING"):
-        # Create logs directory if it doesn't exist
-        if not os.path.exists("logs"):
-            os.makedirs("logs")
+    """Configure application logging without creating files in the repository root."""
+    if app.config.get("TESTING"):
+        return
 
-        # File handler with rotation
+    log_dir = os.path.join(app.instance_path, "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    log_path = os.path.join(log_dir, "planejaenem.log")
+
+    app.logger.propagate = False
+    app.logger.setLevel(logging.INFO)
+
+    existing_file_paths = {
+        getattr(handler, "baseFilename", None)
+        for handler in app.logger.handlers
+        if hasattr(handler, "baseFilename")
+    }
+    if log_path not in existing_file_paths:
         file_handler = RotatingFileHandler(
-            "logs/planejaenem.log",
-            maxBytes=10485760,  # 10 MB
+            log_path,
+            maxBytes=10485760,
             backupCount=10,
         )
         file_handler.setFormatter(
@@ -112,8 +122,14 @@ def setup_logging(app):
             )
         )
         file_handler.setLevel(logging.INFO)
+        app.logger.addHandler(file_handler)
 
-        # Console handler
+    has_console_handler = any(
+        isinstance(handler, logging.StreamHandler)
+        and not isinstance(handler, RotatingFileHandler)
+        for handler in app.logger.handlers
+    )
+    if not has_console_handler:
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(
             logging.Formatter(
@@ -121,9 +137,7 @@ def setup_logging(app):
             )
         )
         console_handler.setLevel(logging.WARNING)
-
-        app.logger.addHandler(file_handler)
         app.logger.addHandler(console_handler)
-        app.logger.setLevel(logging.INFO)
-        app.logger.info("Application started")
+
+    app.logger.info("Application started")
 
