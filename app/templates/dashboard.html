@@ -42,6 +42,71 @@
     </div>
 </div>
 
+<div class="row g-3 mb-4">
+    <div class="col-lg-5">
+        <div class="card dashboard-card h-100">
+            <div class="card-body">
+                <div class="eyebrow">Prioridade</div>
+                <h5 class="card-title mb-3">Resumo do foco</h5>
+
+                <div class="priority-summary">
+                    <div class="priority-item">
+                        <span class="priority-dot priority-dot--high"></span>
+                        <span>Alta</span>
+                        <strong>{{ priority_summary['alta'] }}</strong>
+                    </div>
+                    <div class="priority-item">
+                        <span class="priority-dot priority-dot--medium"></span>
+                        <span>Média</span>
+                        <strong>{{ priority_summary['media'] }}</strong>
+                    </div>
+                    <div class="priority-item">
+                        <span class="priority-dot priority-dot--low"></span>
+                        <span>Baixa</span>
+                        <strong>{{ priority_summary['baixa'] }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card dashboard-card h-100">
+            <div class="card-body">
+                <div class="eyebrow">Agenda</div>
+                <h5 class="card-title mb-3">Próximas tarefas</h5>
+
+                {% if upcoming_tasks %}
+                <div class="upcoming-task-list">
+                    {% for task in upcoming_tasks %}
+                    <div class="upcoming-task-item">
+                        <div>
+                            <div class="fw-semibold">{{ task.titulo }}</div>
+                            <small class="text-muted">{{ task.subject.nome }}</small>
+                        </div>
+                        <div class="upcoming-task-meta">
+                            {% if task.prioridade == 'alta' %}
+                            <span class="badge bg-danger-subtle text-danger">Alta</span>
+                            {% elif task.prioridade == 'media' %}
+                            <span class="badge bg-warning-subtle text-warning">Média</span>
+                            {% else %}
+                            <span class="badge bg-info-subtle text-info">Baixa</span>
+                            {% endif %}
+                            {% if task.data_prevista %}
+                            <small class="text-muted">{{ task.data_prevista.strftime('%d/%m/%Y') }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">Nenhuma tarefa futura cadastrada.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
 {% if subjects %}
 <h4 class="mb-3">Progresso por Matéria</h4>
 <div class="row mb-4">

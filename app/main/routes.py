@@ -31,6 +31,27 @@ def dashboard():
         if (not task.concluida) and task.data_prevista == today
     )
 
+    priority_summary = {
+        "alta": sum(
+            1 for task in all_tasks if (not task.concluida) and task.prioridade == "alta"
+        ),
+        "media": sum(
+            1 for task in all_tasks if (not task.concluida) and task.prioridade == "media"
+        ),
+        "baixa": sum(
+            1 for task in all_tasks if (not task.concluida) and task.prioridade == "baixa"
+        ),
+    }
+
+    upcoming_tasks = (
+        Task.query.filter_by(user_id=current_user.id, concluida=False)
+        .filter(Task.data_prevista.isnot(None))
+        .filter(Task.data_prevista >= today)
+        .order_by(Task.data_prevista.asc(), Task.prioridade.desc())
+        .limit(5)
+        .all()
+    )
+
     return render_template(
         "dashboard.html",
         subjects=subjects,
@@ -38,6 +59,8 @@ def dashboard():
         completed_tasks=completed_tasks,
         overdue_tasks=overdue_tasks,
         todays_tasks=todays_tasks,
+        priority_summary=priority_summary,
+        upcoming_tasks=upcoming_tasks,
         today=today,
     )
 

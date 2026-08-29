@@ -1,3 +1,5 @@
+from datetime import date
+
 import pytest
 from app import create_app, db
 from app.models import User, Subject, Task
@@ -190,3 +192,56 @@ def test_create_task_filter_and_toggle(client):
     assert toggle_response.status_code == 200
     db.session.refresh(task)
     assert task.concluida is True
+
+
+def test_dashboard_shows_priority_summary_and_upcoming_tasks(client):
+    user = User(nome="Ana", email="ana@example.com")
+    user.set_senha("Senha123")
+    db.session.add(user)
+    db.session.commit()
+
+    subject = Subject(nome="Biologia", cor="#10b981", user_id=user.id)
+    db.session.add(subject)
+    db.session.commit()
+
+    db.session.add_all(
+        [
+            Task(
+                titulo="Mapa mental",
+                descricao="Revisar os ciclos",
+                subject_id=subject.id,
+                user_id=user.id,
+                data_prevista=date(2026, 8, 30),
+                prioridade="alta",
+                concluida=False,
+            ),
+            Task(
+                titulo="Resumo de genética",
+                descricao="Anotar os conceitos",
+                subject_id=subject.id,
+                user_id=user.id,
+                data_prevista=date(2026, 9, 2),
+                prioridade="media",
+                concluida=False,
+            ),
+            Task(
+                titulo="Questões de ecologia",
+                descricao="Resolver 10 questões",
+                subject_id=subject.id,
+                user_id=user.id,
+                data_prevista=date(2026, 9, 5),
+                prioridade="baixa",
+                concluida=True,
+            ),
+        ]
+    )
+    db.session.commit()
+
+    login(client)
+
+    response = client.get("/")
+    assert response.status_code == 200
+    assert b"Prioridade" in response.data
+    assert b"Pr\xc3\xb3ximas tarefas" in response.data
+    assert b"Mapa mental" in response.data
+    assert b"Alta" in response.data
