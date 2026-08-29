@@ -22,6 +22,8 @@ def create():
         subject = Subject(
             nome=form.nome.data,
             cor=form.cor.data,
+            prioridade=form.prioridade.data or 3,
+            dificuldade=form.dificuldade.data or 3,
             user_id=current_user.id,
         )
         db.session.add(subject)
@@ -41,6 +43,8 @@ def edit(id):
     if form.validate_on_submit():
         subject.nome = form.nome.data
         subject.cor = form.cor.data
+        subject.prioridade = form.prioridade.data or 3
+        subject.dificuldade = form.dificuldade.data or 3
         db.session.commit()
         flash("Matéria atualizada!", "success")
         return redirect(url_for("subjects.list_subjects"))

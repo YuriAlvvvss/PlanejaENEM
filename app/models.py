@@ -19,6 +19,12 @@ class User(UserMixin, db.Model):
 
     subjects = db.relationship("Subject", backref="user", lazy=True, cascade="all, delete-orphan")
     tasks = db.relationship("Task", backref="user", lazy=True, cascade="all, delete-orphan")
+    study_plans = db.relationship(
+        "StudyPlan", backref="user", lazy=True, cascade="all, delete-orphan"
+    )
+    study_sessions = db.relationship(
+        "StudySession", backref="user", lazy=True, cascade="all, delete-orphan"
+    )
 
     def set_senha(self, senha):
         self.senha_hash = generate_password_hash(senha)
@@ -46,6 +52,8 @@ class Subject(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False)
     cor = db.Column(db.String(7), nullable=False, default="#007bff")
+    prioridade = db.Column(db.Integer, nullable=False, default=1)
+    dificuldade = db.Column(db.Integer, nullable=False, default=3)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     data_criacao = db.Column(
         db.DateTime, default=lambda: datetime.now(timezone.utc)
@@ -67,6 +75,10 @@ class Subject(db.Model):
         if total == 0:
             return 0
         return round((self.completed_tasks / total) * 100)
+
+    @property
+    def priority_score(self):
+        return max(1, int(self.prioridade or 1)) * (int(self.dificuldade or 1) + 1)
 
     def __repr__(self):
         return f"<Subject {self.nome}>"
@@ -98,3 +110,83 @@ class Task(db.Model):
 
     def __repr__(self):
         return f"<Task {self.titulo}>"
+
+
+class StudyPlan(db.Model):
+    __tablename__ = "study_plans"
+    __table_args__ = (
+        db.Index("idx_study_plan_user_id", "user_id"),
+        db.Index("idx_study_plan_exam_date", "exam_date"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    exam_date = db.Column(db.Date, nullable=False)
+    daily_minutes = db.Column(db.Integer, nullable=False, default=90)
+    available_days = db.Column(db.String(200), nullable=False, default="seg,qua,sex")
+    available_hours = db.Column(db.Text, nullable=False, default="08:00-10:00")
+    generated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    last_regenerated_at = db.Column(db.DateTime, nullable=True)
+
+    sessions = db.relationship(
+        "StudySession",
+        backref="plan",
+        lazy=True,
+        cascade="all, delete-orphan",
+    )
+
+    @property
+    def days_list(self):
+        if not self.available_days:
+            return []
+        return [day.strip().lower() for day in self.available_days.split(",") if day.strip()]
+
+    @property
+    def hours_list(self):
+        if not self.available_hours:
+            return []
+        return [slot.strip() for slot in self.available_hours.split(",") if slot.strip()]
+
+    def __repr__(self):
+        return f"<StudyPlan user_id={self.user_id} exam_date={self.exam_date}>"
+
+
+class StudySession(db.Model):
+    __tablename__ = "study_sessions"
+    __table_args__ = (
+        db.Index("idx_study_session_user_id", "user_id"),
+        db.Index("idx_study_session_plan_id", "plan_id"),
+        db.Index("idx_study_session_date", "session_date"),
+        db.Index("idx_study_session_subject_id", "subject_id"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    plan_id = db.Column(db.Integer, db.ForeignKey("study_plans.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False, index=True)
+    session_date = db.Column(db.Date, nullable=False)
+    start_time = db.Column(db.Time, nullable=False)
+    end_time = db.Column(db.Time, nullable=False)
+    duration_minutes = db.Column(db.Integer, nullable=False, default=60)
+    priority_score = db.Column(db.Integer, nullable=False, default=0)
+    manual_override = db.Column(db.Boolean, nullable=False, default=False)
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    subject = db.relationship("Subject", backref="study_sessions", lazy=True)
+
+    @property
+    def day_name(self):
+        if not self.session_date:
+            return "-"
+        day_names = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
+        return day_names[self.session_date.weekday()]
+
+    def __repr__(self):
+        return f"<StudySession {self.subject_id} {self.session_date} {self.start_time}>"

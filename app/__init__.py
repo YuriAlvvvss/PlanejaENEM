@@ -1,15 +1,34 @@
 import logging
 import os
+import sqlite3
 from logging.handlers import RotatingFileHandler
 
 from flask import Flask, request
 
 from app.extensions import csrf, db, login_manager
 
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+INSTANCE_DIR = os.path.join(BASE_DIR, "instance")
+INSTANCE_DB_PATH = os.path.join(INSTANCE_DIR, "planejaenem.db")
+
+
+def resolve_database_uri():
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        return f"sqlite:///{INSTANCE_DB_PATH}"
+
+    normalized_url = database_url.strip()
+    if normalized_url.startswith("sqlite:////app/"):
+        relative_path = normalized_url.replace("sqlite:////app/", "", 1)
+        local_path = os.path.join(BASE_DIR, relative_path)
+        return f"sqlite:///{local_path.replace('\\', '/')}"
+
+    return normalized_url
+
 
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-fallback-key")
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", "sqlite:///planejaenem.db")
+    SQLALCHEMY_DATABASE_URI = resolve_database_uri()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
@@ -23,6 +42,32 @@ class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     WTF_CSRF_ENABLED = False
+
+
+def migrate_legacy_database(app):
+    """Add missing columns to SQLite databases created before schema evolution."""
+    database_uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
+    if not database_uri.startswith("sqlite") or database_uri.endswith(":memory:"):
+        return
+
+    db_path = database_uri.replace("sqlite:///", "", 1)
+    if not db_path or not os.path.exists(db_path):
+        return
+
+    with sqlite3.connect(db_path) as connection:
+        columns = {
+            row[1]
+            for row in connection.execute("PRAGMA table_info(subjects)").fetchall()
+        }
+        if "prioridade" not in columns:
+            connection.execute(
+                "ALTER TABLE subjects ADD COLUMN prioridade INTEGER NOT NULL DEFAULT 3"
+            )
+        if "dificuldade" not in columns:
+            connection.execute(
+                "ALTER TABLE subjects ADD COLUMN dificuldade INTEGER NOT NULL DEFAULT 3"
+            )
+        connection.commit()
 
 
 def create_app(config_name=None):
@@ -68,6 +113,7 @@ def create_app(config_name=None):
 
     from app.auth import auth_bp
     from app.main import main_bp
+    from app.planner import planner_bp
     from app.subjects import subjects_bp
     from app.tasks import tasks_bp
 
@@ -75,9 +121,18 @@ def create_app(config_name=None):
     app.register_blueprint(main_bp)
     app.register_blueprint(subjects_bp, url_prefix="/subjects")
     app.register_blueprint(tasks_bp, url_prefix="/tasks")
+    app.register_blueprint(planner_bp)
 
     with app.app_context():
         from app import models  # noqa: F401
+        database_uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
+        if database_uri.startswith("sqlite") and not database_uri.endswith(":memory:"):
+            db_path = database_uri.replace("sqlite:///", "", 1)
+            if db_path and db_path != ":memory:":
+                db_dir = os.path.dirname(db_path)
+                if db_dir:
+                    os.makedirs(db_dir, exist_ok=True)
+        migrate_legacy_database(app)
         db.create_all()
 
     return app

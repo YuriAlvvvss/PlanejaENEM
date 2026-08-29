@@ -1,13 +1,25 @@
 import re
 
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField
-from wtforms.validators import DataRequired, Length, ValidationError
+from wtforms import IntegerField, SelectField, StringField, SubmitField
+from wtforms.validators import DataRequired, Length, NumberRange, ValidationError
 
 
 class SubjectForm(FlaskForm):
     nome = StringField("Nome da Matéria", validators=[DataRequired(), Length(max=100)])
     cor = StringField("Cor (hex)", validators=[DataRequired(), Length(min=7, max=7)])
+    prioridade = SelectField(
+        "Prioridade",
+        choices=[("1", "1 - baixa"), ("2", "2"), ("3", "3"), ("4", "4"), ("5", "5 - alta")],
+        default="3",
+        coerce=int,
+    )
+    dificuldade = SelectField(
+        "Dificuldade",
+        choices=[("1", "1 - fácil"), ("2", "2"), ("3", "3"), ("4", "4"), ("5", "5 - alta")],
+        default="3",
+        coerce=int,
+    )
     submit = SubmitField("Salvar")
 
     def validate_nome(self, field):
