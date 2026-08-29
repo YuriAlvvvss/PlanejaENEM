@@ -17,6 +17,8 @@ def create_app(config_name=None):
         "DATABASE_URL", "sqlite:///planejaenem.db"
     )
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
     if config_name == "testing":
         app.config["TESTING"] = True
@@ -28,6 +30,7 @@ def create_app(config_name=None):
     csrf.init_app(app)
 
     login_manager.login_view = "auth.login"
+    login_manager.login_message = "Faça login para acessar esta página."
     login_manager.login_message_category = "warning"
 
     from app.auth import auth_bp

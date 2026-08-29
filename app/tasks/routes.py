@@ -68,10 +68,7 @@ def create():
 @tasks_bp.route("/<int:id>/edit", methods=["GET", "POST"])
 @login_required
 def edit(id):
-    task = Task.query.get_or_404(id)
-    if task.user_id != current_user.id:
-        flash("Acesso negado.", "danger")
-        return redirect(url_for("tasks.list_tasks"))
+    task = Task.query.filter_by(user_id=current_user.id).filter_by(id=id).first_or_404()
 
     subjects = Subject.query.filter_by(user_id=current_user.id).order_by(Subject.nome).all()
     form = TaskForm(obj=task)
@@ -94,10 +91,7 @@ def edit(id):
 @tasks_bp.route("/<int:id>/delete", methods=["GET", "POST"])
 @login_required
 def delete(id):
-    task = Task.query.get_or_404(id)
-    if task.user_id != current_user.id:
-        flash("Acesso negado.", "danger")
-        return redirect(url_for("tasks.list_tasks"))
+    task = Task.query.filter_by(user_id=current_user.id).filter_by(id=id).first_or_404()
 
     if request.method == "POST":
         db.session.delete(task)
@@ -111,10 +105,7 @@ def delete(id):
 @tasks_bp.route("/<int:id>/toggle", methods=["POST"])
 @login_required
 def toggle(id):
-    task = Task.query.get_or_404(id)
-    if task.user_id != current_user.id:
-        flash("Acesso negado.", "danger")
-        return redirect(url_for("tasks.list_tasks"))
+    task = Task.query.filter_by(user_id=current_user.id).filter_by(id=id).first_or_404()
 
     task.concluida = not task.concluida
     db.session.commit()

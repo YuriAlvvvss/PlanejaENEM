@@ -9,7 +9,7 @@ class User(UserMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(120), nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, index=True, nullable=False)
     senha_hash = db.Column(db.String(256), nullable=False)
     data_criacao = db.Column(
         db.DateTime, default=lambda: datetime.now(timezone.utc)

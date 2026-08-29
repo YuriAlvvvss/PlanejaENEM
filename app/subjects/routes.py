@@ -34,10 +34,7 @@ def create():
 @subjects_bp.route("/<int:id>/edit", methods=["GET", "POST"])
 @login_required
 def edit(id):
-    subject = Subject.query.get_or_404(id)
-    if subject.user_id != current_user.id:
-        flash("Acesso negado.", "danger")
-        return redirect(url_for("subjects.list_subjects"))
+    subject = Subject.query.filter_by(user_id=current_user.id).filter_by(id=id).first_or_404()
 
     form = SubjectForm(obj=subject)
     if form.validate_on_submit():
@@ -53,10 +50,7 @@ def edit(id):
 @subjects_bp.route("/<int:id>/delete", methods=["GET", "POST"])
 @login_required
 def delete(id):
-    subject = Subject.query.get_or_404(id)
-    if subject.user_id != current_user.id:
-        flash("Acesso negado.", "danger")
-        return redirect(url_for("subjects.list_subjects"))
+    subject = Subject.query.filter_by(user_id=current_user.id).filter_by(id=id).first_or_404()
 
     if subject.tasks:
         flash(
