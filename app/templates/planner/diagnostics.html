@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Diagnóstico - PlanejaENEM{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <div>
+        <div class="eyebrow">Diagnóstico</div>
+        <h2>Desempenho por Área</h2>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                {% if diagnostics.has_data %}
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr>
+                                <th>Área</th>
+                                <th>Média</th>
+                                <th>Questões</th>
+                                <th>Matérias</th>
+                                <th>Detalhes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for area_key, area_data in diagnostics.areas.items() %}
+                            <tr>
+                                <td>
+                                    <strong>{{ area_data.label }}</strong>
+                                </td>
+                                <td>
+                                    {% if area_data.average_percent is not none %}
+                                    <span class="badge {% if area_data.average_percent >= 70 %}bg-success{% elif area_data.average_percent >= 50 %}bg-warning{% else %}bg-danger{% endif %}">
+                                        {{ area_data.average_percent }}%
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ area_data.total_questions }}</td>
+                                <td>{{ area_data.subjects }}</td>
+                                <td>
+                                    <ul class="mb-0 list-unstyled">
+                                        {% for detail in area_data.subject_details %}
+                                        <li class="small">
+                                            {{ detail.name }}:
+                                            {% if detail.correct_pct is not none %}
+                                            {{ detail.correct_pct|round(0) }}%
+                                            {% else %}
+                                            sem dados
+                                            {% endif %}
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-active">
+                                <td><strong>Geral</strong></td>
+                                <td>
+                                    <span class="badge {% if diagnostics.overall >= 70 %}bg-success{% elif diagnostics.overall >= 50 %}bg-warning{% else %}bg-danger{% endif %}">
+                                        {{ diagnostics.overall }}%
+                                    </span>
+                                </td>
+                                <td colspan="3"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="mt-3">
+                    <h6>Legenda de Desempenho</h6>
+                    <div class="d-flex gap-3 flex-wrap">
+                        <span class="badge bg-success">Excelente (≥85%)</span>
+                        <span class="badge bg-primary">Bom (≥70%)</span>
+                        <span class="badge bg-warning">Médio (≥50%)</span>
+                        <span class="badge bg-danger">Baixo (≥30%)</span>
+                        <span class="badge bg-dark">Muito Baixo (&lt;30%)</span>
+                    </div>
+                </div>
+                {% else %}
+                <div class="workspace-empty">
+                    <h6><i class="bi bi-graph-up"></i> Sem dados de desempenho</h6>
+                    <p class="mb-0">Complete algumas tarefas para ver seu diagnóstico por área.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="eyebrow mb-2">Como funciona</div>
+                <h5 class="card-title mb-3">Diagnóstico</h5>
+                <p class="small text-muted">
+                    O diagnóstico é calculado automaticamente com base nas tarefas concluídas
+                    e no desempenho registrado em cada matéria.
+                </p>
+                <p class="small text-muted">
+                    Quanto mais dados você tiver, mais preciso será o diagnóstico.
+                    Recomendamos pelo menos 3 tarefas por matéria para conclusões confiáveis.
+                </p>
+                <p class="small text-muted">
+                    O diagnóstico alimenta o score de prioridade do planner adaptativo.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

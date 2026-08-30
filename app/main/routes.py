@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timezone
 
 from flask import flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -6,7 +6,7 @@ from flask_login import current_user, login_required
 from app.extensions import db
 from app.main import main_bp
 from app.main.stats import build_dashboard_stats
-from app.models import StudySession
+from app.models import StudySession, Task
 
 
 def _safe_next_url(default_endpoint="main.dashboard"):
@@ -43,6 +43,30 @@ def toggle_session(id):
     session = StudySession.query.filter_by(user_id=current_user.id, id=id).first_or_404()
     session.completed = not session.completed
     session.completed_at = datetime.now(UTC) if session.completed else None
+
+    if session.completed:
+        from app.planner.spaced_repetition import calculate_next_review_date
+
+        task = Task.query.filter_by(
+            user_id=current_user.id,
+            subject_id=session.subject_id,
+        ).order_by(Task.data_criacao.desc()).first()
+
+        if task:
+            correct_pct = None
+            total_questions = 0
+
+            if hasattr(task, 'correct_pct'):
+                correct_pct = task.correct_pct
+                total_questions = getattr(task, 'total_questions', 1)
+
+            next_review = calculate_next_review_date(
+                correct_pct=correct_pct,
+                total_questions=total_questions,
+            )
+            if next_review:
+                task.next_review_date = next_review
+
     db.session.commit()
     status = "concluída" if session.completed else "reaberta"
     flash(f"Sessão {status}.", "success")

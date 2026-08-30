@@ -140,6 +140,10 @@ def migrate_legacy_database(app):
             _add_missing_column(
                 connection, "study_sessions", "completed_at", "completed_at DATETIME"
             )
+            _add_missing_column(
+                connection, "study_sessions", "session_type",
+                "session_type VARCHAR(20) NOT NULL DEFAULT 'teoria'",
+            )
         connection.commit()
 
 

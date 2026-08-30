@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -171,6 +171,8 @@ class StudySession(db.Model):
         db.Index("idx_study_session_subject_id", "subject_id"),
     )
 
+    SESSION_TYPES = ["teoria", "exercicios", "questoes_enem", "revisao", "simulado"]
+
     id = db.Column(db.Integer, primary_key=True)
     plan_id = db.Column(db.Integer, db.ForeignKey("study_plans.id"), nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
@@ -182,6 +184,7 @@ class StudySession(db.Model):
     completed = db.Column(db.Boolean, nullable=False, default=False)
     completed_at = db.Column(db.DateTime, nullable=True)
     priority_score = db.Column(db.Integer, nullable=False, default=0)
+    session_type = db.Column(db.String(20), nullable=False, default="teoria")
     manual_override = db.Column(db.Boolean, nullable=False, default=False)
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
@@ -200,6 +203,13 @@ class StudySession(db.Model):
             return "-"
         day_names = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
         return day_names[self.session_date.weekday()]
+
+    @property
+    def is_missed(self):
+        """Verifica se a sessão foi perdida (data passada e não concluída)."""
+        if self.completed or self.manual_override:
+            return False
+        return self.session_date < date.today()
 
     def __repr__(self):
         return f"<StudySession {self.subject_id} {self.session_date} {self.start_time}>"

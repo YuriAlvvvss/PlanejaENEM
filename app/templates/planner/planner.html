@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-header mb-4">
     <div>
-        <div class="eyebrow">Planejamento</div>
+        <div class="eyebrow">Planejamento Adaptativo</div>
         <h2>Cronograma de estudos</h2>
     </div>
 </div>
@@ -13,8 +13,8 @@
     <div class="col-lg-5">
         <div class="card h-100">
             <div class="card-body">
-                <div class=\"eyebrow mb-2\">⚙️ Configuração</div>
-                <h5 class=\"card-title mb-3\">Personalize seu cronograma</h5>
+                <div class="eyebrow mb-2">⚙️ Configuração</div>
+                <h5 class="card-title mb-3">Personalize seu cronograma</h5>
                 <form method="POST" action="{{ url_for('planner.planner') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -51,7 +51,12 @@
                         {% for subject in subjects %}
                         <div class="row g-2 align-items-center mb-2">
                             <div class="col-5">
-                                <label class="form-label small mb-0">{{ subject.nome }}</label>
+                                <label class="form-label small mb-0">
+                                    {{ subject.nome }}
+                                    <span class="badge bg-secondary ms-1" style="font-size: 0.65rem;">
+                                        {{ subject.area_label }}
+                                    </span>
+                                </label>
                             </div>
                             <div class="col-3">
                                 <select class="form-select form-select-sm" name="priority_{{ subject.id }}">
@@ -79,9 +84,25 @@
                     {% endif %}
 
                     <button type="submit" class="btn btn-primary w-100 mt-3" {% if not subjects %}disabled{% endif %}>
-                        <i class="bi bi-rocket-takeoff"></i> Gerar cronograma
+                        <i class="bi bi-rocket-takeoff"></i> Gerar cronograma adaptativo
                     </button>
                 </form>
+
+                {% if active_plan %}
+                <div class="mt-3 pt-3 border-top">
+                    <div class="d-flex gap-2">
+                        <form method="POST" action="{{ url_for('planner.replan') }}" class="flex-grow-1">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-outline-warning btn-sm w-100">
+                                <i class="bi bi-arrow-clockwise"></i> Replanejar sessões perdidas
+                            </button>
+                        </form>
+                        <a href="{{ url_for('planner.diagnostics') }}" class="btn btn-outline-info btn-sm">
+                            <i class="bi bi-graph-up"></i> Diagnóstico
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -111,6 +132,7 @@
                             <tr>
                                 <th>📅 Data</th>
                                 <th>📚 Disciplina</th>
+                                <th>📖 Tipo</th>
                                 <th>🕐 Horário</th>
                                 <th>⏱️ Duração</th>
                                 <th>✏️ Ações</th>
@@ -118,11 +140,31 @@
                         </thead>
                         <tbody>
                             {% for session in active_plan.sessions|sort(attribute='session_date') %}
-                            <tr class="session-row">
-                                <td>{{ session.session_date.strftime('%d/%m/%Y') }}</td>
+                            <tr class="session-row {% if session.completed %}table-success{% elif session.is_missed %}table-danger{% endif %}">
+                                <td>
+                                    {{ session.session_date.strftime('%d/%m/%Y') }}
+                                    {% if session.is_missed %}
+                                    <span class="badge bg-danger ms-1" style="font-size: 0.6rem;">PERDIDA</span>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     <span class="badge" style="background-color: {{ session.subject.cor }}; color: white;">
                                         {{ session.subject.nome }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if session.session_type == 'teoria' %}info{% elif session.session_type == 'exercicios' %}primary{% elif session.session_type == 'questoes_enem' %}success{% elif session.session_type == 'revisao' %}warning{% else %}dark{% endif %}">
+                                        {% if session.session_type == 'teoria' %}
+                                        📖 Teoria
+                                        {% elif session.session_type == 'exercicios' %}
+                                        ✏️ Exercícios
+                                        {% elif session.session_type == 'questoes_enem' %}
+                                        🎯 Questões ENEM
+                                        {% elif session.session_type == 'revisao' %}
+                                        🔄 Revisão
+                                        {% else %}
+                                        📝 Simulado
+                                        {% endif %}
                                     </span>
                                 </td>
                                 <td>{{ session.start_time.strftime('%H:%M') }} - {{ session.end_time.strftime('%H:%M') }}</td>
@@ -153,6 +195,23 @@
                             {% endfor %}
                         </tbody>
                     </table>
+                </div>
+
+                <div class="mt-3 pt-3 border-top">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="small text-muted">Total de sessões</div>
+                            <div class="fw-bold">{{ active_plan.sessions|length }}</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="small text-muted">Concluídas</div>
+                            <div class="fw-bold text-success">{{ active_plan.sessions|selectattr('completed')|list|length }}</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="small text-muted">Horas totais</div>
+                            <div class="fw-bold">{{ (active_plan.sessions|sum(attribute='duration_minutes') / 60)|round(1) }}h</div>
+                        </div>
+                    </div>
                 </div>
                 {% else %}
                 <div class="workspace-empty">
