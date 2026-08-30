@@ -30,6 +30,13 @@
                         <div class="text-danger small">{{ error }}</div>
                         {% endfor %}
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ profile_form.senha_atual.label }}</label>
+                        {{ profile_form.senha_atual(class="form-control") }}
+                        {% for error in profile_form.senha_atual.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
                     <div class="d-grid mt-4">
                         {{ profile_form.submit(class="btn btn-primary") }}
                     </div>

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Privacidade e Dados - PlanejaENEM{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="eyebrow">Conta</div>
+        <h2>Privacidade e Dados</h2>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h3 class="card-title mb-3">Meus Dados</h3>
+                <p class="text-muted">Visualize e exporte todos os dados associados à sua conta.</p>
+                <ul class="list-unstyled mb-4">
+                    <li class="mb-2"><i class="bi bi-person"></i> Dados pessoais (nome, email)</li>
+                    <li class="mb-2"><i class="bi bi-bookmark"></i> Matérias cadastradas</li>
+                    <li class="mb-2"><i class="bi bi-check2-square"></i> Tarefas e progresso</li>
+                    <li class="mb-2"><i class="bi bi-calendar3"></i> Cronogramas de estudo</li>
+                    <li class="mb-2"><i class="bi bi-clock-history"></i> Sessões de estudo</li>
+                </ul>
+                <a href="{{ url_for('auth.export_data') }}" class="btn btn-primary">
+                    <i class="bi bi-download"></i> Exportar meus dados
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card border-danger h-100">
+            <div class="card-body">
+                <h3 class="card-title mb-3 text-danger">Zona de Perigo</h3>
+                <p class="text-muted">Exclua sua conta e todos os dados associados. Esta ação é irreversível.</p>
+                <a href="{{ url_for('auth.delete_account') }}" class="btn btn-outline-danger">
+                    <i class="bi bi-trash"></i> Excluir minha conta
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

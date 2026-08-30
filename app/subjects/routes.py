@@ -1,6 +1,7 @@
-from flask import flash, redirect, render_template, url_for
+from flask import flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
+from app.authz import get_user_subject
 from app.areas import infer_area
 from app.extensions import db
 from app.models import Subject
@@ -42,7 +43,7 @@ def create():
 @subjects_bp.route("/<int:id>/edit", methods=["GET", "POST"])
 @login_required
 def edit(id):
-    subject = Subject.query.filter_by(user_id=current_user.id).filter_by(id=id).first_or_404()
+    subject = get_user_subject(id)
 
     form = SubjectForm(obj=subject)
     if form.validate_on_submit():
@@ -61,7 +62,7 @@ def edit(id):
 @subjects_bp.route("/<int:id>/delete", methods=["GET", "POST"])
 @login_required
 def delete(id):
-    subject = Subject.query.filter_by(user_id=current_user.id).filter_by(id=id).first_or_404()
+    subject = get_user_subject(id)
 
     if subject.tasks:
         flash(
@@ -70,7 +71,7 @@ def delete(id):
         )
         return redirect(url_for("subjects.list_subjects"))
 
-    if __import__("flask").request.method == "POST":
+    if request.method == "POST":
         db.session.delete(subject)
         db.session.commit()
         flash("Matéria excluída!", "success")

@@ -1,4 +1,5 @@
 from datetime import date, datetime, timezone
+import secrets
 
 from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -40,6 +41,37 @@ class User(UserMixin, db.Model):
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
+
+
+class PasswordResetToken(db.Model):
+    __tablename__ = "password_reset_tokens"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    token_hash = db.Column(db.String(256), nullable=False, index=True)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    used = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    user = db.relationship("User", backref="reset_tokens")
+
+    @staticmethod
+    def generate_token():
+        return secrets.token_urlsafe(32)
+
+    @staticmethod
+    def hash_token(token):
+        from werkzeug.security import generate_password_hash
+        return generate_password_hash(token, method="sha256")
+
+    def check_token(self, token):
+        return check_password_hash(self.token_hash, token)
+
+    def is_valid(self):
+        return not self.used and datetime.now(timezone.utc) < self.expires_at.replace(tzinfo=timezone.utc)
+
+    def __repr__(self):
+        return f"<PasswordResetToken user_id={self.user_id}>"
 
 
 class Subject(db.Model):

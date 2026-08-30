@@ -6,7 +6,6 @@ services:
     environment:
       - FLASK_APP=run.py
       - FLASK_ENV=development
-      - SECRET_KEY=change-this-in-production
       - DATABASE_URL=sqlite:////app/instance/planejaenem.db
     volumes:
       - ./instance:/app/instance

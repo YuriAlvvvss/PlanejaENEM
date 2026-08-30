@@ -13,7 +13,8 @@ from datetime import date, datetime
 from flask import flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
-from app.extensions import db
+from app.authz import get_user_plan, get_user_session, user_owns_subject
+from app.extensions import db, limiter
 from app.models import StudyPlan, StudySession, Subject
 from app.planner import planner_bp
 from app.planner.services import (
@@ -27,6 +28,7 @@ from app.planner.services import (
 
 @planner_bp.route("/", methods=["GET", "POST"])
 @login_required
+@limiter.limit("10/minute")
 def planner():
     subjects = Subject.query.filter_by(user_id=current_user.id).order_by(Subject.nome).all()
     existing_plan = StudyPlan.query.filter_by(user_id=current_user.id).order_by(
@@ -137,7 +139,7 @@ def planner():
 @planner_bp.route("/<int:id>/regenerate", methods=["POST"])
 @login_required
 def regenerate(id):
-    plan = StudyPlan.query.filter_by(user_id=current_user.id, id=id).first_or_404()
+    plan = get_user_plan(id)
     if plan.sessions:
         for session in plan.sessions:
             db.session.delete(session)
@@ -150,11 +152,15 @@ def regenerate(id):
 @planner_bp.route("/<int:id>/manual", methods=["POST"])
 @login_required
 def update_manual(id):
-    session = StudySession.query.filter_by(user_id=current_user.id, id=id).first_or_404()
-    session.manual_override = True
-    session.notes = request.form.get("notes", session.notes)
+    study_session = get_user_session(id)
+    study_session.manual_override = True
+    study_session.notes = request.form.get("notes", study_session.notes)
     if request.form.get("subject_id"):
-        session.subject_id = int(request.form.get("subject_id"))
+        new_subject_id = int(request.form.get("subject_id"))
+        if not user_owns_subject(new_subject_id):
+            flash("Matéria inválida.", "danger")
+            return redirect(url_for("planner.planner"))
+        study_session.subject_id = new_subject_id
     db.session.commit()
     flash("Sessão atualizada manualmente.", "success")
     return redirect(url_for("planner.planner"))

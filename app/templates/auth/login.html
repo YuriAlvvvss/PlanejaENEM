@@ -32,6 +32,9 @@
                     {% endif %}
                 </div>
                 {{ form.submit(class="btn btn-primary w-100 mb-3", value="Entrar") }}
+                <div class="text-center text-muted small mb-2">
+                    <a href="{{ url_for('auth.forgot_password') }}" class="link-primary">Esqueceu a senha?</a>
+                </div>
                 <div class="text-center text-muted small">
                     Não tem conta? <a href="{{ url_for('auth.register') }}" class="link-primary">Crie uma agora</a>
                 </div>

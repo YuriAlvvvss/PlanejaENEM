@@ -47,6 +47,7 @@ class LoginForm(FlaskForm):
 class ProfileForm(FlaskForm):
     nome = StringField("Nome", validators=[DataRequired(), Length(max=120)])
     email = StringField("Email", validators=[DataRequired(), Email()])
+    senha_atual = PasswordField("Senha atual", validators=[DataRequired()])
     submit = SubmitField("Salvar alterações")
 
     def validate_email(self, field):
@@ -69,3 +70,20 @@ class ChangePasswordForm(FlaskForm):
         validators=[DataRequired(), EqualTo("nova_senha", message="As senhas não conferem.")],
     )
     submit = SubmitField("Alterar senha")
+
+
+class ForgotPasswordForm(FlaskForm):
+    email = StringField("Email", validators=[DataRequired(), Email()])
+    submit = SubmitField("Enviar link de recuperação")
+
+
+class ResetPasswordForm(FlaskForm):
+    nova_senha = PasswordField(
+        "Nova senha",
+        validators=[DataRequired(), Length(min=8, max=128), validate_password_strength],
+    )
+    confirmar_nova_senha = PasswordField(
+        "Confirmar nova senha",
+        validators=[DataRequired(), EqualTo("nova_senha", message="As senhas não conferem.")],
+    )
+    submit = SubmitField("Redefinir senha")

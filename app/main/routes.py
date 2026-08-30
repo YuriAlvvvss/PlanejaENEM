@@ -3,10 +3,11 @@ from datetime import UTC, datetime, timezone
 from flask import flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
+from app.authz import get_user_session
 from app.extensions import db
 from app.main import main_bp
 from app.main.stats import build_dashboard_stats
-from app.models import StudySession, Task
+from app.models import Task
 
 
 def _safe_next_url(default_endpoint="main.dashboard"):
@@ -40,16 +41,16 @@ def weekly_goal():
 @main_bp.route("/sessions/<int:id>/toggle", methods=["POST"])
 @login_required
 def toggle_session(id):
-    session = StudySession.query.filter_by(user_id=current_user.id, id=id).first_or_404()
-    session.completed = not session.completed
-    session.completed_at = datetime.now(UTC) if session.completed else None
+    study_session = get_user_session(id)
+    study_session.completed = not study_session.completed
+    study_session.completed_at = datetime.now(UTC) if study_session.completed else None
 
-    if session.completed:
+    if study_session.completed:
         from app.planner.spaced_repetition import calculate_next_review_date
 
         task = Task.query.filter_by(
             user_id=current_user.id,
-            subject_id=session.subject_id,
+            subject_id=study_session.subject_id,
         ).order_by(Task.data_criacao.desc()).first()
 
         if task:
@@ -68,7 +69,7 @@ def toggle_session(id):
                 task.next_review_date = next_review
 
     db.session.commit()
-    status = "concluída" if session.completed else "reaberta"
+    status = "concluída" if study_session.completed else "reaberta"
     flash(f"Sessão {status}.", "success")
     return redirect(_safe_next_url())
 

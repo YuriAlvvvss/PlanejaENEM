@@ -56,6 +56,9 @@
                     <span class="user-avatar">{{ current_user.nome[:1] | upper }}</span>
                     <span class="topbar-name">{{ current_user.nome }}</span>
                 </a>
+                <a class="topbar-profile" href="{{ url_for('auth.privacy') }}" title="Privacidade">
+                    <i class="bi bi-shield-lock"></i>
+                </a>
                 <a class="topbar-logout" href="{{ url_for('auth.logout') }}">Sair</a>
             </div>
         </header>

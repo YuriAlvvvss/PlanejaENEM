@@ -6,7 +6,7 @@ from logging.handlers import RotatingFileHandler
 
 from flask import Flask, request
 
-from app.extensions import csrf, db, login_manager
+from app.extensions import csrf, db, limiter, login_manager
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 INSTANCE_DIR = os.path.join(BASE_DIR, "instance")
@@ -63,6 +63,10 @@ def build_config(config_name=None):
         "WTF_CSRF_TIME_LIMIT": 3600,
         "JSON_SORT_KEYS": False,
         "PREFERRED_URL_SCHEME": "https" if env_name == "production" else "http",
+        "MAX_CONTENT_LENGTH": 2 * 1024 * 1024,
+        "MAX_FORM_MEMORY_SIZE": 512 * 1024,
+        "MAX_FORM_PARTS": 50,
+        "USE_HSTS": env_name == "production" or os.environ.get("USE_HSTS", "").lower() in {"1", "true", "yes", "on"},
     }
 
     if config_name == "testing":
@@ -155,6 +159,8 @@ def create_app(config_name=None):
     login_manager.init_app(app)
     csrf.init_app(app)
 
+    limiter.init_app(app)
+
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Faça login para acessar esta página."
     login_manager.login_message_category = "warning"
@@ -171,7 +177,6 @@ def create_app(config_name=None):
     def add_security_headers(response):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "SAMEORIGIN"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
         response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
@@ -185,9 +190,14 @@ def create_app(config_name=None):
             "font-src 'self' https://cdn.jsdelivr.net; "
             "img-src 'self' data:; "
             "connect-src 'self'; "
+            "base-uri 'self'; "
+            "form-action 'self'; "
             "frame-ancestors 'none'"
         )
-        if not app.config.get("TESTING") and request.is_secure:
+        use_hsts = app.config.get("USE_HSTS", False) or (
+            not app.config.get("TESTING") and request.is_secure
+        )
+        if use_hsts:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         else:
             response.headers["Strict-Transport-Security"] = "max-age=0"

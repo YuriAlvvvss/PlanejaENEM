@@ -5,7 +5,7 @@ from wtforms.validators import DataRequired, Length, Optional, ValidationError
 
 class TaskForm(FlaskForm):
     titulo = StringField("Título", validators=[DataRequired(), Length(max=200)])
-    descricao = TextAreaField("Descrição", validators=[Optional()])
+    descricao = TextAreaField("Descrição", validators=[Optional(), Length(max=2000)])
     subject_id = SelectField("Matéria", coerce=int, validators=[DataRequired()])
     data_prevista = DateField("Data Prevista", validators=[Optional()], format="%Y-%m-%d")
     prioridade = SelectField(

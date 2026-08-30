@@ -3,6 +3,7 @@ from datetime import date
 from flask import flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
+from app.authz import get_user_task
 from app.extensions import db
 from app.main.stats import mark_task_completion
 from app.models import Subject, Task
@@ -88,7 +89,7 @@ def create():
 @tasks_bp.route("/<int:id>/edit", methods=["GET", "POST"])
 @login_required
 def edit(id):
-    task = Task.query.filter_by(user_id=current_user.id).filter_by(id=id).first_or_404()
+    task = get_user_task(id)
 
     subjects = Subject.query.filter_by(user_id=current_user.id).order_by(Subject.nome).all()
     form = TaskForm(obj=task)
@@ -115,7 +116,7 @@ def edit(id):
 @tasks_bp.route("/<int:id>/delete", methods=["GET", "POST"])
 @login_required
 def delete(id):
-    task = Task.query.filter_by(user_id=current_user.id).filter_by(id=id).first_or_404()
+    task = get_user_task(id)
 
     if request.method == "POST":
         db.session.delete(task)
@@ -129,7 +130,7 @@ def delete(id):
 @tasks_bp.route("/<int:id>/toggle", methods=["POST"])
 @login_required
 def toggle(id):
-    task = Task.query.filter_by(user_id=current_user.id).filter_by(id=id).first_or_404()
+    task = get_user_task(id)
 
     mark_task_completion(task, not task.concluida)
     db.session.commit()
