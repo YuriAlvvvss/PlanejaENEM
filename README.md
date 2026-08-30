@@ -1,24 +1,29 @@
 # PlanejaENEM 📚
 
-**PlanejaENEM** é uma aplicação web completa para organização de estudos direcionada aos candidatos do ENEM. A plataforma ajuda o aluno a registrar matérias, gerenciar tarefas de estudo, acompanhar progresso em tempo real e gerar um cronograma personalizado de estudos com base em disponibilidade semanal, tempo diário e data da prova.
+**PlanejaENEM** é uma aplicação web para organização de estudos direcionada aos candidatos do ENEM. A plataforma permite registrar matérias (organizadas por área do ENEM), gerenciar tarefas com repetição espaçada, acompanhar o progresso em tempo real por meio de métricas e gráficos, e gerar um cronograma personalizado de estudos com base na disponibilidade semanal, tempo diário e data da prova.
 
 ## 🎯 Visão Geral
 
-A aplicação foi desenvolvida com **Flask** seguindo a arquitetura robusta de **Application Factory** com **Blueprints**, separando de forma clara as responsabilidades: autenticação, dashboard, gestão de matérias, tarefas e planejamento. O sistema foi projetado para uso individual por usuário, com armazenamento seguro em **SQLite** por padrão.
+A aplicação foi desenvolvida com **Flask** seguindo a arquitetura de **Application Factory** com **Blueprints**, separando as responsabilidades em autenticação, dashboard, gestão de matérias, tarefas e planejamento. O sistema é multiusuário (cada usuário possui seus próprios dados), com armazenamento em **SQLite** por padrão e fácil migração para PostgreSQL.
 
 ### ✨ Funcionalidades Principais
 
-- ✅ **Autenticação**: Cadastro e login seguro de usuários com proteção de rotas
-- ✅ **Gestão de Matérias**: CRUD completo de disciplinas com prioridades e dificuldades
-- ✅ **Gestão de Tarefas**: CRUD de tarefas com prioridade, data prevista e status de conclusão
-- ✅ **Dashboard**: Indicadores de progresso, tarefas pendentes e próximas entregas
-- ✅ **Planejamento Inteligente**: Geração automática de cronograma de estudos por dia e faixa horária
-- ✅ **Edição Manual**: Possibilidade de ajustar sessões do cronograma manualmente
-- ✅ **Regeneração Dinâmica**: Refazer o plano de estudos conforme necessário
-- ✅ **Health Check**: Monitoramento de saúde via rota `/health`
-- ✅ **Logging**: Sistema de logs em `instance/logs/`
-- ✅ **Segurança**: Cabeçalhos de segurança, proteção CSRF e cookies seguros
-- ✅ **Animações Premium**: Interface moderna com transições suaves e efeitos glassmorphism (veja [PREMIUM_UPGRADES.md](PREMIUM_UPGRADES.md))
+- ✅ **Autenticação segura**: Cadastro e login com validação de força de senha e bloqueio temporário após tentativas falhas (brute-force protection)
+- ✅ **Perfil do usuário**: Atualização de nome/e-mail e troca de senha
+- ✅ **Gestão de Matérias**: CRUD completo com cor, prioridade (1-5), dificuldade (1-5) e **área do ENEM** (Linguagens, Humanas, Natureza, Matemática, Redação)
+- ✅ **Inferência automática de área**: A área é deduzida a partir do nome da matéria quando não informada
+- ✅ **Gestão de Tarefas**: CRUD com prioridade (baixa/média/alta), data prevista, filtros por status/matéria/busca e alternância de conclusão
+- ✅ **Repetição espaçada**: Ao concluir uma tarefa, calcula-se automaticamente a próxima data de revisão (7 dias)
+- ✅ **Dashboard**: Métricas de progresso, gráficos (Chart.js), sequência de estudos (streak), cobertura por área e revisões pendentes
+- ✅ **Meta semanal**: Definição de objetivo de horas de estudo por semana
+- ✅ **Planejamento Inteligente**: Geração automática de sessões de estudo por dia e faixa horária, priorizando matérias mais importantes/difíceis
+- ✅ **Edição Manual**: Ajuste de sessões do cronograma (matéria e anotações) com flag de override
+- ✅ **Regeneração**: Refazer o plano de estudos conforme necessário
+- ✅ **Conclusão de sessões**: Marcar sessões como concluídas diretamente no dashboard/planner
+- ✅ **Health Check**: Monitoramento via rota `/health`
+- ✅ **Logging**: Logs em `instance/logs/planejaenem.log` com rotação
+- ✅ **Segurança**: Cabeçalhos de segurança (CSP, HSTS em produção), proteção CSRF, cookies seguros e session protection "strong"
+- ✅ **Interface Premium**: Animações, glassmorphism e tema moderno (veja [PREMIUM_UPGRADES.md](PREMIUM_UPGRADES.md))
 
 ## 🛠 Stack Tecnológico
 
@@ -26,13 +31,13 @@ A aplicação foi desenvolvida com **Flask** seguindo a arquitetura robusta de *
 |-----------|-----------|
 | **Backend** | Python 3.12 |
 | **Framework Web** | Flask 3.1.1 |
-| **ORM & Banco de Dados** | Flask-SQLAlchemy 3.1.1 + SQLite |
+| **ORM & Banco de Dados** | Flask-SQLAlchemy 3.1.1 + SQLite (compatível com PostgreSQL) |
 | **Autenticação** | Flask-Login 0.6.3 |
 | **Formulários** | Flask-WTF 1.2.2 + WTForms 3.2.1 |
 | **Validação de Email** | email-validator 2.2.0 |
 | **Variáveis de Ambiente** | python-dotenv 1.1.0 |
 | **Web Server** | Werkzeug 3.1.3 |
-| **Frontend** | Bootstrap 5 + HTML/CSS/JavaScript |
+| **Frontend** | Bootstrap 5 + Chart.js + HTML/CSS/JavaScript |
 | **Containerização** | Docker / Docker Compose |
 | **Testes** | pytest 8.3.3 |
 
@@ -41,40 +46,38 @@ A aplicação foi desenvolvida com **Flask** seguindo a arquitetura robusta de *
 ```
 PlanejaENEM/
 ├── app/                           # Pacote principal da aplicação
-│   ├── __init__.py               # Factory da aplicação, configuração e setup
+│   ├── __init__.py               # Factory da aplicação, config e segurança (headers, CSP, HSTS)
 │   ├── extensions.py             # Extensões (db, login_manager, csrf)
-│   ├── models.py                 # Modelos de dados (User, Subject, Task, StudyPlan, StudySession)
+│   ├── areas.py                  # Áreas do ENEM e inferência automática de área
+│   ├── models.py                 # Modelos (User, Subject, Task, StudyPlan, StudySession)
 │   ├── auth/                     # Blueprint de autenticação
-│   │   ├── __init__.py
-│   │   ├── forms.py              # Formulários: RegisterForm, LoginForm, ProfileForm
-│   │   └── routes.py             # Rotas: /register, /login, /logout, /profile
-│   ├── main/                     # Blueprint principal
-│   │   ├── __init__.py
-│   │   └── routes.py             # Rotas: /dashboard, /health
+│   │   ├── forms.py              # RegistrationForm, LoginForm, ProfileForm, ChangePasswordForm
+│   │   └── routes.py             # /register, /login, /logout, /profile (com lockout de login)
+│   ├── main/                     # Blueprint principal (dashboard)
+│   │   ├── routes.py            # /, /weekly-goal, /sessions/<id>/toggle, /health
+│   │   └── stats.py             # Cálculo de métricas do dashboard (streak, áreas, gráficos)
 │   ├── planner/                  # Blueprint de planejamento
-│   │   ├── __init__.py
-│   │   └── routes.py             # Rotas: /planner, /generate-plan, /regenerate-plan
-│   ├── subjects/                 # Blueprint de matérias/disciplinas
-│   │   ├── __init__.py
-│   │   ├── forms.py              # Formulário de matéria
-│   │   └── routes.py             # Rotas: CRUD de matérias
+│   │   └── routes.py            # /planner, /planner/<id>/regenerate, /planner/<id>/manual
+│   ├── subjects/                 # Blueprint de matérias
+│   │   ├── forms.py             # SubjectForm (com área do ENEM e cor)
+│   │   └── routes.py            # CRUD de matérias
 │   ├── tasks/                    # Blueprint de tarefas
-│   │   ├── __init__.py
-│   │   ├── forms.py              # Formulário de tarefa
-│   │   └── routes.py             # Rotas: CRUD de tarefas e toggle de status
+│   │   ├── forms.py             # TaskForm
+│   │   └── routes.py            # CRUD de tarefas, filtros e toggle de status
 │   ├── static/                   # Arquivos estáticos
 │   │   ├── app.js                # JavaScript da aplicação
+│   │   ├── dashboard-charts.js   # Gráficos do dashboard (Chart.js)
 │   │   ├── style.css             # Estilos padrão
 │   │   └── premium.css           # Estilos premium (animações, glassmorphism)
 │   └── templates/                # Templates HTML
-│       ├── base.html             # Template base
-│       ├── dashboard.html        # Dashboard principal
+│       ├── base.html             # Template base (sidebar, topbar, tema)
+│       ├── dashboard.html        # Dashboard principal com métricas e gráficos
 │       ├── auth/
 │       │   ├── login.html
 │       │   ├── register.html
 │       │   └── profile.html
 │       ├── includes/
-│       │   └── flashes.html      # Componente de mensagens flash
+│       │   └── flashes.html      # Mensagens flash
 │       ├── planner/
 │       │   └── planner.html
 │       ├── subjects/
@@ -85,369 +88,285 @@ PlanejaENEM/
 │           ├── list.html
 │           ├── form.html
 │           └── confirm_delete.html
-├── instance/                      # Diretório de runtime (não versionado)
-│   ├── logs/                     # Arquivos de log em execução
-│   └── planejaenem.db            # Banco de dados SQLite padrão
+├── instance/                      # Runtime (ignorado no git)
+│   ├── logs/                     # Logs da aplicação
+│   └── planejaenem.db            # Banco SQLite (criado automaticamente)
 ├── tests/                        # Suite de testes
 │   ├── test_auth.py              # Testes de autenticação
+│   ├── test_dashboard.py         # Testes do dashboard
 │   ├── test_planner.py           # Testes de planejamento
 │   └── test_phase2_quality.py    # Testes de qualidade
-├── Dockerfile                    # Configuração Docker
-├── docker-compose.yml            # Orquestração Docker Compose
-├── requirements.txt              # Dependências Python
-├── run.py                        # Entrypoint da aplicação
-├── run.sh                        # Script para Linux/macOS
-├── run.bat                       # Script para Windows
-├── README.md                     # Este arquivo
-├── PREMIUM_UPGRADES.md           # Documentação de recursos premium
-├── .gitignore
-└── .env                          # Variáveis de ambiente (opcional)
+├── Dockerfile
+├── docker-compose.yml
+├── requirements.txt
+├── run.py                        # Entrypoint
+├── run.sh / run.bat              # Scripts de execução
+├── README.md
+├── PREMIUM_UPGRADES.md
+└── .env                          # Variáveis de ambiente (ignorado no git)
+```
 
 ## 📋 Pré-requisitos
 
 - **Python** 3.12 ou superior
-- **pip** (gerenciador de pacotes Python)
-- **Git** (para clonar o repositório)
-- **Docker e Docker Compose** (opcional, para execução em containers)
-- Navegador moderno com suporte a Bootstrap 5
+- **pip**
+- **Git**
+- **Docker e Docker Compose** (opcional)
+- Navegador moderno com suporte a Bootstrap 5 e Chart.js
 
 ## 🚀 Instalação e Execução
 
-### Execução Local
+### Localmente
 
-#### 1️⃣ Clonar o Repositório
+#### 1️⃣ Clonar e preparar ambiente
 
 ```bash
 git clone <url-do-repositorio>
 cd PlanejaENEM
-```
-
-#### 2️⃣ Criar Ambiente Virtual
-
-```bash
 python -m venv venv
 ```
 
-**Ativar o ambiente virtual:**
+Ativar o ambiente virtual:
+- **Windows:** `venv\Scripts\activate`
+- **Linux/macOS:** `source venv/bin/activate`
 
-**Windows:**
-```bash
-venv\Scripts\activate
-```
-
-**Linux/macOS:**
-```bash
-source venv/bin/activate
-```
-
-#### 3️⃣ Instalar Dependências
+#### 2️⃣ Instalar dependências
 
 ```bash
 pip install -r requirements.txt
 ```
 
-#### 4️⃣ Configurar Variáveis de Ambiente (Opcional)
+#### 3️⃣ Configurar variáveis de ambiente (opcional)
 
-O projeto usa valores padrão caso `.env` não exista. Para personalizar, crie um arquivo `.env` na raiz do projeto:
+O projeto usa valores padrão caso `.env` não exista. Crie um `.env` na raiz para personalizar:
 
 ```env
+FLASK_APP=run.py
 FLASK_ENV=development
-SECRET_KEY=sua-chave-secreta-super-segura
-DATABASE_URL=sqlite:////caminho/para/instance/planejaenem.db
+SECRET_KEY=uma-chave-secreta-bem-longa
+DATABASE_URL=sqlite:///instance/planejaenem.db
 PORT=5000
-FLASK_DEBUG=1
+FLASK_DEBUG=0
 ```
 
 **Variáveis disponíveis:**
+- `FLASK_APP`: Entrypoint da aplicação (`run.py`)
 - `FLASK_ENV`: `development` (padrão) ou `production`
-- `SECRET_KEY`: Chave para assinatura de sessões (gerado automaticamente em dev)
-- `DATABASE_URL`: URL do banco de dados (padrão: SQLite local)
+- `SECRET_KEY`: Assinatura de sessões. **Obrigatória em produção** (a app encerra se ausente em `production`)
+- `DATABASE_URL`: URL do banco (padrão: SQLite local)
 - `PORT`: Porta da aplicação (padrão: 5000)
 - `FLASK_DEBUG`: Modo debug (0 ou 1)
+- `SESSION_COOKIE_SECURE`: `1` para cookies seguros em produção (também ativado automaticamente quando `FLASK_ENV=production`)
 
-#### 5️⃣ Executar a Aplicação
+> ⚠️ Em produção, `SECRET_KEY` é obrigatória e cookies/sessões passam a ser `Secure`; o cabeçalho HSTS (`Strict-Transport-Security`) é emitido quando a requisição é HTTPS.
+
+#### 4️⃣ Executar
 
 ```bash
 python run.py
 ```
 
-A aplicação estará disponível em:
+Acesse `http://localhost:5000`.
 
-```
-http://localhost:5000
-```
-
-### Execução com Docker
-
-#### 1️⃣ Construir e Executar com Docker Compose
+### Com Docker
 
 ```bash
 docker-compose up --build
 ```
 
-#### 2️⃣ Acessar a Aplicação
-
-```
-http://localhost:5000
-```
-
-#### 3️⃣ Parar os Containers
-
-```bash
-docker-compose down
-```
+Acesse `http://localhost:5000`. O volume `./instance` persiste o banco. Para parar: `docker-compose down`.
 
 ## 🧪 Testes
-
-### Executar a Suite de Testes
 
 ```bash
 python -m pytest -q
 ```
 
-### Executar Testes com Cobertura
+Com cobertura:
 
 ```bash
 python -m pytest --cov=app --cov-report=html
 ```
 
-### Executar Testes Específicos
+Testes específicos:
 
 ```bash
-# Testes de autenticação
 python -m pytest tests/test_auth.py -v
-
-# Testes de planejamento
+python -m pytest tests/test_dashboard.py -v
 python -m pytest tests/test_planner.py -v
-
-# Testes de qualidade
 python -m pytest tests/test_phase2_quality.py -v
 ```
 
 ## 🔗 Rotas Principais
 
-### Autenticação
-- `GET  /auth/register` - Página de cadastro
-- `POST /auth/register` - Submeter cadastro
-- `GET  /auth/login` - Página de login
-- `POST /auth/login` - Submeter login
-- `GET  /auth/logout` - Fazer logout
-- `GET  /auth/profile` - Perfil do usuário
-- `POST /auth/profile` - Atualizar perfil
+### Autenticação (`/auth`)
+- `GET/POST /auth/register` - Cadastro (com validação de força de senha)
+- `GET/POST /auth/login` - Login (com bloqueio após 5 falhas em 5 min)
+- `GET     /auth/logout` - Logout
+- `GET/POST /auth/profile` - Perfil (atualizar dados e trocar senha)
 
-### Dashboard
-- `GET /` - Dashboard principal (protegida)
+### Dashboard (`/`)
+- `GET      /` - Dashboard principal (protegida)
+- `POST     /weekly-goal` - Atualizar meta semanal de estudo (horas)
+- `POST     /sessions/<id>/toggle` - Marcar/desmarcar conclusão de uma sessão
+- `GET      /health` - Status da aplicação (público)
 
-### Matérias
-- `GET  /subjects` - Listar matérias
-- `GET  /subjects/new` - Formulário de nova matéria
-- `POST /subjects` - Criar matéria
-- `GET  /subjects/<id>/edit` - Formulário de edição
-- `POST /subjects/<id>` - Atualizar matéria
-- `GET  /subjects/<id>/delete` - Confirmação de exclusão
-- `POST /subjects/<id>/delete` - Deletar matéria
+### Matérias (`/subjects`)
+- `GET      /subjects` - Listar
+- `GET/POST /subjects/new` - Criar
+- `GET/POST /subjects/<id>/edit` - Editar
+- `GET/POST /subjects/<id>/delete` - Excluir (bloqueia se houver tarefas vinculadas)
 
-### Tarefas
-- `GET  /tasks` - Listar tarefas
-- `GET  /tasks/new` - Formulário de nova tarefa
-- `POST /tasks` - Criar tarefa
-- `GET  /tasks/<id>/edit` - Formulário de edição
-- `POST /tasks/<id>` - Atualizar tarefa
-- `GET  /tasks/<id>/delete` - Confirmação de exclusão
-- `POST /tasks/<id>/delete` - Deletar tarefa
-- `POST /tasks/<id>/toggle` - Alternar status de conclusão
+### Tarefas (`/tasks`)
+- `GET      /tasks` - Listar (filtros: `?status=pending|done`, `?subject=<id>`, `?q=<busca>`)
+- `GET/POST /tasks/new` - Criar
+- `GET/POST /tasks/<id>/edit` - Editar
+- `GET/POST /tasks/<id>/delete` - Excluir
+- `POST     /tasks/<id>/toggle` - Alternar conclusão (define `next_review_date`)
 
-### Planejamento
-- `GET  /planner` - Visualizar cronograma
-- `POST /planner/generate-plan` - Gerar novo plano
-- `POST /planner/regenerate-plan` - Regenerar plano existente
+### Planejamento (`/planner`)
+- `GET/POST /planner` - Visualizar e gerar cronograma (POST gera o plano)
+- `POST     /planner/<id>/regenerate` - Regenerar plano existente
+- `POST     /planner/<id>/manual` - Ajuste manual de uma sessão (matéria/anotações)
 
-### Health Check
-- `GET /health` - Status da aplicação (público)
+## 📖 Fluxo de Uso
 
-## 📖 Fluxo Principal de Uso
-
-1. **Registrar/Login**
-   - Acesse `http://localhost:5000` e crie uma conta
-   - Faça login com suas credenciais
-
-2. **Configurar Matérias**
-   - Acesse `/subjects` para gerenciar disciplinas
-   - Adicione suas matérias de estudo
-   - Configure prioridade e dificuldade para cada uma
-
-3. **Gerenciar Tarefas**
-   - Acesse `/tasks` para criar tarefas de estudo
-   - Defina a matéria, data prevista, prioridade e descrição
-   - Marque tarefas como concluídas conforme progride
-
-4. **Configurar Plano de Estudo**
-   - Acesse `/planner` para definir seus parâmetros:
-     - Dias da semana disponíveis
-     - Horários de estudo (ex: 08:00-12:00, 14:00-18:00)
-     - Tempo total diário de estudo
-     - Data da prova ENEM
-   
-5. **Gerar Cronograma**
-   - Clique em "Gerar Plano" para criar sessões de estudo
-   - O sistema distribui automaticamente as tarefas ao longo do período
-   - Ajuste manualmente conforme necessário
-
-6. **Acompanhar Progresso**
-   - Visualize o **Dashboard** com métricas em tempo real:
-     - Taxa de conclusão de tarefas
-     - Sequência de dias de estudo
-     - Cobertura de matérias
-     - Próximas tarefas pendentes
+1. **Registrar/Login** em `http://localhost:5000`.
+2. **Configurar Matérias** em `/subjects`: nome, cor, prioridade, dificuldade e área do ENEM.
+3. **Gerenciar Tarefas** em `/tasks`: vincule a uma matéria, defina data prevista e prioridade; marque como concluídas (gera data de revisão).
+4. **Definir Meta Semanal** no dashboard (campo "Meta semanal").
+5. **Gerar Cronograma** em `/planner`: informe dias disponíveis, faixas horárias, tempo diário e data da prova; ajuste manualmente se necessário e regenere quando quiser.
+6. **Acompanhar Progresso** no dashboard: taxa de conclusão, streak, cobertura por área, sessões do dia, revisões pendentes e gráficos de horas estudadas.
 
 ## 📊 Modelos de Dados
 
 ### User
 ```python
-- id: Identificador único
-- username: Nome de usuário único
-- email: Email único
-- password_hash: Senha criptografada
-- created_at: Data de criação
+- id
+- nome                  # nome do usuário
+- email                 # único
+- senha_hash            # hash bcrypt (Werkzeug)
+- weekly_goal_minutes   # meta semanal (padrão 600 min)
+- data_criacao
 ```
 
 ### Subject (Matéria)
 ```python
-- id: Identificador único
-- user_id: Referência ao usuário
-- name: Nome da disciplina
-- priority: Prioridade (1-5)
-- difficulty: Dificuldade (1-5)
-- created_at: Data de criação
+- id
+- nome
+- cor                   # cor hexadecimal (ex: #3B82F6)
+- prioridade            # 1-5
+- dificuldade           # 1-5
+- area                  # área do ENEM (linguagens, humanas, natureza, matematica, redacao, outro)
+- user_id
+- data_criacao
 ```
+Propriedades úteis: `progress_percent`, `priority_score`, `area_label`, `total_tasks`, `completed_tasks`.
 
 ### Task (Tarefa)
 ```python
-- id: Identificador único
-- user_id: Referência ao usuário
-- subject_id: Referência à matéria
-- title: Título da tarefa
-- description: Descrição
-- priority: Prioridade (1-5)
-- due_date: Data prevista
-- completed: Status de conclusão
-- created_at: Data de criação
+- id
+- titulo
+- descricao
+- subject_id
+- user_id
+- data_prevista         # Date (opcional)
+- concluida             # Boolean
+- prioridade            # "baixa" | "media" | "alta"
+- completed_at         # DateTime (quando concluída)
+- next_review_date      # Date (revisão espaçada, +7 dias)
+- data_criacao
 ```
 
 ### StudyPlan
 ```python
-- id: Identificador único
-- user_id: Referência ao usuário
-- exam_date: Data da prova
-- available_days: Dias disponíveis (JSON)
-- available_hours: Horários disponíveis (JSON)
-- daily_study_time: Tempo diário em minutos
-- created_at: Data de criação
+- id
+- user_id
+- exam_date             # Date (data da prova)
+- daily_minutes         # tempo diário de estudo
+- available_days        # String (ex: "seg,qua,sex")
+- available_hours       # String (ex: "08:00-10:00,14:00-16:00")
+- generated_at
+- last_regenerated_at
 ```
 
 ### StudySession
 ```python
-- id: Identificador único
-- study_plan_id: Referência ao plano
-- task_id: Referência à tarefa
-- scheduled_date: Data agendada
-- time_slot: Faixa horária
-- duration_minutes: Duração em minutos
+- id
+- plan_id
+- user_id
+- subject_id            # (não há task_id; a sessão referencia a matéria)
+- session_date          # Date
+- start_time            # Time
+- end_time              # Time
+- duration_minutes
+- completed             # Boolean
+- completed_at
+- priority_score
+- manual_override       # ajuste manual
+- notes
+- created_at / updated_at
 ```
 
 ## ⚙️ Configuração & Pontos Importantes
 
 ### Banco de Dados
-- Por padrão, usa **SQLite** armazenado em `instance/planejaenem.db`
-- Totalmente compatível com PostgreSQL (ajuste `DATABASE_URL`)
-- Migrations podem ser implementadas com Alembic se necessário
+- Padrão: SQLite em `instance/planejaenem.db` (criado automaticamente na primeira execução).
+- Compatível com PostgreSQL: basta ajustar `DATABASE_URL` (ex: `postgresql://usuario:senha@host:5432/planejaenem`).
+- **Migração de bancos legados**: `migrate_legacy_database()` em `app/__init__.py` adiciona colunas ausentes (prioridade, dificuldade, area, weekly_goal_minutes, completed_at, next_review_date, etc.) em bancos SQLite existentes.
 
 ### Logging
-- Logs da aplicação são gravados em `instance/logs/planejaenem.log`
-- Usa `RotatingFileHandler` para evitar crescimento indefinido
-- Configure o nível de log ajustando `app/__init__.py`
+- Gravado em `instance/logs/planejaenem.log` com `RotatingFileHandler` (10 MB × 10 backups).
+- Nível configurável em `setup_logging()` (`app/__init__.py`).
 
 ### Segurança
-- ✅ **CSRF Protection**: Ativado em todos os formulários via Flask-WTF
-- ✅ **Session Security**: Cookies HTTP-only e SameSite
-- ✅ **Password Security**: Hash bcrypt via Werkzeug
-- ✅ **Route Protection**: Todas as rotas autenticadas usam `@login_required`
-- ⚠️ **HTTPS**: Configure em produção com variável `FLASK_ENV=production`
+- ✅ **CSRF**: ativado em todos os formulários (Flask-WTF).
+- ✅ **Senhas**: hash via Werkzeug; cadastro exige força mínima (8+ caracteres, maiúscula, minúscula e número).
+- ✅ **Proteção de login**: bloqueio após 5 tentativas falhas em 5 minutos (por IP e por e-mail).
+- ✅ **Cookies/Sessões**: HTTP-only, SameSite=Lax; Secure em produção; `session_protection="strong"`; sessão permanente de 30 min.
+- ✅ **Cabeçalhos**: CSP, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, COOP/COEP; HSTS apenas em HTTPS/produção.
+- ✅ **Rotas**: todas as rotas autenticadas usam `@login_required`.
 
 ### Health Check
-- Rota `GET /health` responde `{"status": "ok"}` para monitoramento
-- Disponível sem autenticação para verificações de LB/monitoring
+- `GET /health` retorna `{"status": "ok"}` para monitoramento (sem autenticação).
 
 ## 🐛 Troubleshooting
 
-### Erro: "ModuleNotFoundError: No module named 'flask'"
-**Solução**: Certifique-se de que o ambiente virtual está ativado
-```bash
-# Windows
-venv\Scripts\activate
-
-# Linux/macOS
-source venv/bin/activate
-
-# Depois instale as dependências
-pip install -r requirements.txt
-```
-
-### Erro: "Address already in use" na porta 5000
-**Solução**: Use uma porta diferente
-```bash
-python run.py --port 5001
-# Ou configure via .env: PORT=5001
-```
-
-### Banco de dados não criado
-**Solução**: O banco é criado automaticamente na primeira execução. Se precisar resetar:
-```bash
-# Delete o banco existente
-rm instance/planejaenem.db
-
-# Inicie a aplicação novamente
-python run.py
-```
-
-### Testes falhando
-**Solução**: Certifique-se das dependências e que nenhuma instância está rodando
-```bash
-python -m pytest -v  # modo verbose para mais detalhes
-```
+- **ModuleNotFoundError: 'flask'**: ative o venv e rode `pip install -r requirements.txt`.
+- **Porta em uso**: `run.py` lê a porta da variável `PORT` (padrão 5000). Defina `PORT=5001` no `.env` ou no ambiente antes de `python run.py`.
+- **Banco não criado / colunas faltando**: o banco e as colunas são criados/migrados automaticamente. Para resetar: remova `instance/planejaenem.db` e reinicie.
+- **Testes falhando**: garanta o venv ativado e nenhuma instância rodando; use `python -m pytest -v`.
 
 ## 🚦 Status do Projeto
 
-- ✅ Autenticação funcional e segura
-- ✅ CRUD de matérias e tarefas implementado
-- ✅ Dashboard com métricas de progresso
-- ✅ Geração inteligente de cronograma
-- ✅ Suite de testes automatizados (passando)
-- ✅ Interface moderna com Bootstrap 5
-- ✅ Animações premium e glassmorphism
-- ✅ Documentação completa
-- 🔄 Pronto para produção com Docker
+- ✅ Autenticação segura (força de senha + lockout)
+- ✅ CRUD de matérias (com áreas do ENEM) e tarefas
+- ✅ Repetição espaçada e revisões
+- ✅ Dashboard com métricas, streak e gráficos (Chart.js)
+- ✅ Planejamento inteligente + ajuste manual
+- ✅ Suite de testes automatizados
+- ✅ Interface premium (animações, glassmorphism)
+- ✅ Pronto para produção com Docker (exige `SECRET_KEY`)
 
 ## 📚 Documentação Adicional
 
 - **[PREMIUM_UPGRADES.md](PREMIUM_UPGRADES.md)** - Recursos premium, animações e melhorias visuais
-- Código bem documentado com docstrings em português
-- Modelo de banco de dados normalizado
-- Scripts de inicialização inclusos (run.py, run.sh, run.bat)
+- Docstrings em português e modelo normalizado
+- Scripts de inicialização: `run.py`, `run.sh`, `run.bat`
 
 ## 🤝 Contribuindo
 
-1. Faça um fork do repositório
-2. Crie uma branch para sua feature (`git checkout -b feature/nova-funcionalidade`)
-3. Commit suas mudanças (`git commit -m 'Adiciona nova funcionalidade'`)
-4. Push para a branch (`git push origin feature/nova-funcionalidade`)
-5. Abra um Pull Request
+1. Fork do repositório
+2. Branch de feature (`git checkout -b feature/nova-funcionalidade`)
+3. Commit (`git commit -m 'Adiciona nova funcionalidade'`)
+4. Push (`git push origin feature/nova-funcionalidade`)
+5. Pull Request
 
 ### Diretrizes
-- Mantenha a estrutura de Blueprints (separação por módulos)
+- Mantenha a arquitetura de Blueprints por módulo
 - Escreva testes para novas funcionalidades
-- Siga as conventions de nomes em português
-- Atualize o README se necessário
+- Campos, rotas e mensagens em português
+- Atualize o README quando necessário
 
 ## 📝 Licença
 
@@ -455,7 +374,7 @@ Este projeto é fornecido como está, livre para uso e modificação.
 
 ## 👤 Autor
 
-Desenvolvido como ferramenta de preparação para o ENEM.
+Ferramenta de preparação para o ENEM.
 
 ---
 
