@@ -5,83 +5,79 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}PlanejaENEM{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark main-navbar">
-        <div class="container">
-            <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('main.dashboard') }}">
-                <span class="brand-mark">P</span>
-                <span>PlanejaENEM</span>
+<body class="{% if current_user.is_authenticated %}layout-app{% else %}layout-auth{% endif %}">
+    {% if current_user.is_authenticated %}
+    <aside class="app-sidebar" id="appSidebar">
+        <a class="sidebar-brand" href="{{ url_for('main.dashboard') }}" title="PlanejaENEM">
+            <span class="brand-mark">P</span>
+            <span class="sidebar-brand-text">ENEM</span>
+        </a>
+        <nav class="sidebar-nav" aria-label="Principal">
+            <a class="sidebar-link {% if request.endpoint == 'main.dashboard' %}is-active{% endif %}" href="{{ url_for('main.dashboard') }}">
+                <i class="bi bi-grid"></i>
+                <span>Dashboard</span>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
+            <a class="sidebar-link {% if request.endpoint and request.endpoint.startswith('subjects.') %}is-active{% endif %}" href="{{ url_for('subjects.list_subjects') }}">
+                <i class="bi bi-bookmark"></i>
+                <span>Matérias</span>
+            </a>
+            <a class="sidebar-link {% if request.endpoint and request.endpoint.startswith('tasks.') %}is-active{% endif %}" href="{{ url_for('tasks.list_tasks') }}">
+                <i class="bi bi-check2-square"></i>
+                <span>Tarefas</span>
+            </a>
+            <a class="sidebar-link {% if request.endpoint and request.endpoint.startswith('planner.') %}is-active{% endif %}" href="{{ url_for('planner.planner') }}">
+                <i class="bi bi-calendar3"></i>
+                <span>Cronograma</span>
+            </a>
+        </nav>
+    </aside>
+    <div class="app-main">
+        <header class="app-topbar">
+            <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-label="Abrir menu">
+                <i class="bi bi-list"></i>
             </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                {% if current_user.is_authenticated %}
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.dashboard') }}">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('subjects.list_subjects') }}">Matérias</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('tasks.list_tasks') }}">Tarefas</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('planner.planner') }}">Cronograma</a>
-                    </li>
-                </ul>
-                <ul class="navbar-nav align-items-lg-center">
-                    <li class="nav-item">
-                        <a class="nav-link user-pill" href="{{ url_for('auth.profile') }}">
-                            <span class="user-pill__icon">{{ current_user.nome[:1] | upper }}</span>
-                            {{ current_user.nome }}
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link nav-logout" href="{{ url_for('auth.logout') }}">Sair</a>
-                    </li>
-                </ul>
-                {% else %}
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('auth.login') }}">Entrar</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="btn btn-light btn-sm nav-register" href="{{ url_for('auth.register') }}">Registrar</a>
-                    </li>
-                </ul>
-                {% endif %}
+            <form class="top-search" method="GET" action="{{ url_for('tasks.list_tasks') }}" role="search">
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <input type="search" name="q" value="{{ request.args.get('q', '') }}" placeholder="Buscar tarefas e matérias" aria-label="Buscar">
+            </form>
+            <div class="topbar-user">
+                <a class="topbar-profile" href="{{ url_for('auth.profile') }}">
+                    <span class="user-avatar">{{ current_user.nome[:1] | upper }}</span>
+                    <span class="topbar-name">{{ current_user.nome }}</span>
+                </a>
+                <a class="topbar-logout" href="{{ url_for('auth.logout') }}">Sair</a>
             </div>
+        </header>
+        <div class="app-content">
+    {% else %}
+    <header class="auth-topbar">
+        <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('auth.login') }}">
+            <span class="brand-mark">P</span>
+            <span>PlanejaENEM</span>
+        </a>
+        <div class="auth-topbar-links">
+            <a href="{{ url_for('auth.login') }}">Entrar</a>
+            <a class="btn btn-sm btn-primary" href="{{ url_for('auth.register') }}">Registrar</a>
         </div>
-    </nav>
+    </header>
+    <div class="auth-wrap">
+    {% endif %}
 
-    <div class="container app-shell">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        {% for category, message in messages %}
-        <div class="alert alert-{{ category }} alert-dismissible fade show app-alert" role="alert" style="animation: slideInDown 0.3s ease;">
-            {% if category == 'success' %}
-            <i class="bi bi-check-circle"></i>
-            {% elif category == 'error' %}
-            <i class="bi bi-exclamation-triangle"></i>
-            {% elif category == 'warning' %}
-            <i class="bi bi-exclamation-circle"></i>
-            {% else %}
-            <i class="bi bi-info-circle"></i>
-            {% endif %}
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            {% include "includes/flashes.html" %}
+            {% block content %}{% endblock %}
+
+    {% if current_user.is_authenticated %}
         </div>
-        {% endfor %}
-        {% endif %}
-        {% endwith %}
-
-        {% block content %}{% endblock %}
     </div>
+    <div class="sidebar-backdrop" data-sidebar-toggle></div>
+    {% else %}
+    </div>
+    {% endif %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>

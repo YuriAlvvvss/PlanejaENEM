@@ -2,207 +2,177 @@
 {% block title %}Dashboard - PlanejaENEM{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">Dashboard</h2>
-
-<div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="stat-card stat-primary">
-            <div class="stat-label">Matérias</div>
-            <div class="stat-value">{{ subjects|length }}</div>
-        </div>
+<div class="kpi-strip" aria-label="Indicadores">
+    <div class="kpi">
+        <span class="kpi-label">Matérias</span>
+        <span class="kpi-value">{{ subjects|length }}</span>
     </div>
-    <div class="col-md-3">
-        <div class="stat-card stat-warning">
-            <div class="stat-label">Pendentes</div>
-            <div class="stat-value">{{ pending_tasks|length }}</div>
-        </div>
+    <div class="kpi">
+        <span class="kpi-label">Pendentes</span>
+        <span class="kpi-value">{{ pending_tasks|length }}</span>
     </div>
-    <div class="col-md-3">
-        <div class="stat-card stat-success">
-            <div class="stat-label">Concluídas</div>
-            <div class="stat-value">{{ completed_tasks }}</div>
-        </div>
+    <div class="kpi">
+        <span class="kpi-label">Concluídas</span>
+        <span class="kpi-value">{{ completed_tasks }}</span>
     </div>
-    <div class="col-md-3">
-        <div class="stat-card stat-danger">
-            <div class="stat-label">Atrasadas</div>
-            <div class="stat-value">{{ overdue_tasks }}</div>
-        </div>
+    <div class="kpi">
+        <span class="kpi-label">Atrasadas</span>
+        <span class="kpi-value kpi-value--alert">{{ overdue_tasks }}</span>
+    </div>
+    <div class="kpi">
+        <span class="kpi-label">Hoje</span>
+        <span class="kpi-value">{{ todays_tasks }}</span>
+    </div>
+    <div class="kpi kpi--date">
+        <span class="kpi-label">Data</span>
+        <span class="kpi-meta">{{ today.strftime('%d/%m/%Y') }}</span>
     </div>
 </div>
 
-<div class="row mb-4">
-    <div class="col-md-12">
-        <div class="alert alert-info mb-0 d-flex align-items-center justify-content-between">
-            <div>
-                <strong>Resumo do dia:</strong> {{ todays_tasks }} tarefa(s) para hoje.
-            </div>
-            <span class="badge text-bg-light">{{ today.strftime('%d/%m/%Y') }}</span>
+<div class="workspace">
+    <div class="view-toolbar">
+        <div class="view-tabs" role="tablist" aria-label="Visualização">
+            <button type="button" class="view-tab is-active" data-view="calendar" role="tab" aria-selected="true">Calendário</button>
+            <button type="button" class="view-tab" data-view="list" role="tab" aria-selected="false">Lista</button>
+            <button type="button" class="view-tab" data-view="board" role="tab" aria-selected="false">Quadro</button>
         </div>
-    </div>
-</div>
-
-<div class="row g-3 mb-4">
-    <div class="col-lg-5">
-        <div class="card dashboard-card h-100">
-            <div class="card-body">
-                <div class="eyebrow">Prioridade</div>
-                <h5 class="card-title mb-3">Resumo do foco</h5>
-
-                <div class="priority-summary">
-                    <div class="priority-item">
-                        <span class="priority-dot priority-dot--high"></span>
-                        <span>Alta</span>
-                        <strong>{{ priority_summary['alta'] }}</strong>
-                    </div>
-                    <div class="priority-item">
-                        <span class="priority-dot priority-dot--medium"></span>
-                        <span>Média</span>
-                        <strong>{{ priority_summary['media'] }}</strong>
-                    </div>
-                    <div class="priority-item">
-                        <span class="priority-dot priority-dot--low"></span>
-                        <span>Baixa</span>
-                        <strong>{{ priority_summary['baixa'] }}</strong>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <div class="cal-month-label">{{ calendar_month_label }}</div>
     </div>
 
-    <div class="col-lg-7">
-        <div class="card dashboard-card h-100">
-            <div class="card-body">
-                <div class="eyebrow">Agenda</div>
-                <h5 class="card-title mb-3">Próximas tarefas</h5>
-
-                {% if upcoming_tasks %}
-                <div class="upcoming-task-list">
-                    {% for task in upcoming_tasks %}
-                    <div class="upcoming-task-item">
-                        <div>
-                            <div class="fw-semibold">{{ task.titulo }}</div>
-                            <small class="text-muted">{{ task.subject.nome }}</small>
-                        </div>
-                        <div class="upcoming-task-meta">
-                            {% if task.prioridade == 'alta' %}
-                            <span class="badge bg-danger-subtle text-danger">Alta</span>
-                            {% elif task.prioridade == 'media' %}
-                            <span class="badge bg-warning-subtle text-warning">Média</span>
-                            {% else %}
-                            <span class="badge bg-info-subtle text-info">Baixa</span>
-                            {% endif %}
-                            {% if task.data_prevista %}
-                            <small class="text-muted">{{ task.data_prevista.strftime('%d/%m/%Y') }}</small>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="text-muted mb-0">Nenhuma tarefa futura cadastrada.</p>
-                {% endif %}
-            </div>
-        </div>
+    {% if subjects %}
+    <div class="subject-legend" aria-label="Matérias">
+        {% for subject in subjects %}
+        <span class="legend-item">
+            <span class="legend-dot" style="background: {{ subject.cor }};"></span>
+            {{ subject.nome }}
+        </span>
+        {% endfor %}
     </div>
-</div>
+    {% endif %}
 
-{% if subjects %}
-<h4 class="mb-3">Progresso por Matéria</h4>
-<div class="row mb-4">
-    {% for subject in subjects %}
-    <div class="col-md-4 mb-3">
-        <div class="card dashboard-card">
-            <div class="card-body">
-                <div class="d-flex align-items-center mb-2">
-                    <span class="badge me-2" style="background-color: {{ subject.cor }}; width: 16px; height: 16px; border-radius: 50%;">&nbsp;</span>
-                    <h6 class="mb-0">{{ subject.nome }}</h6>
-                </div>
-                <div class="progress mb-2">
-                    <div class="progress-bar" role="progressbar"
-                         style="width: {{ subject.progress_percent }}%; background-color: {{ subject.cor }};">
-                        {{ subject.progress_percent }}%
-                    </div>
-                </div>
-                <small class="text-muted">{{ subject.completed_tasks }}/{{ subject.total_tasks }} tarefas concluídas</small>
-            </div>
+    <section class="view-panel" data-panel="calendar">
+        {% if not subjects %}
+        <div class="workspace-empty">
+            <h5>Bem-vindo ao PlanejaENEM!</h5>
+            <p>Comece criando suas matérias de estudo para preencher o calendário.</p>
+            <a href="{{ url_for('subjects.create') }}" class="btn btn-primary">Criar Primeira Matéria</a>
         </div>
-    </div>
-    {% endfor %}
-</div>
-{% endif %}
-
-{% if pending_tasks %}
-<h4 class="mb-3">Tarefas Pendentes</h4>
-<div class="table-responsive">
-    <table class="table table-hover dashboard-table">
-        <thead>
-            <tr>
-                <th>Tarefa</th>
-                <th>Matéria</th>
-                <th>Prioridade</th>
-                <th>Data Prevista</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for task in pending_tasks %}
-            <tr>
-                <td>{{ task.titulo }}</td>
-                <td>
-                    <span class="badge" style="background-color: {{ task.subject.cor }};">
-                        {{ task.subject.nome }}
-                    </span>
-                </td>
-                <td>
-                    {% if task.prioridade == 'alta' %}
-                    <span class="badge bg-danger">Alta</span>
-                    {% elif task.prioridade == 'media' %}
-                    <span class="badge bg-warning text-dark">Média</span>
-                    {% else %}
-                    <span class="badge bg-info">Baixa</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if task.data_prevista %}
-                        {% if task.data_prevista < today %}
-                        <span class="text-danger">{{ task.data_prevista.strftime('%d/%m/%Y') }}</span>
-                        {% elif task.data_prevista == today %}
-                        <span class="text-warning fw-bold">Hoje</span>
-                        {% else %}
-                        {{ task.data_prevista.strftime('%d/%m/%Y') }}
-                        {% endif %}
-                    {% else %}
-                    <span class="text-muted">-</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <form method="POST" action="{{ url_for('tasks.toggle', id=task.id) }}" class="d-inline">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn btn-sm btn-outline-success" title="Concluir">
-                            &#10003;
-                        </button>
-                    </form>
-                    <a href="{{ url_for('tasks.edit', id=task.id) }}" class="btn btn-sm btn-outline-primary" title="Editar">
-                        &#9998;
-                    </a>
-                </td>
-            </tr>
+        {% endif %}
+        <div class="cal-grid" aria-label="Calendário do mês">
+            {% for label in weekday_labels %}
+            <div class="cal-dow">{{ label }}</div>
             {% endfor %}
-        </tbody>
-    </table>
+            {% for week in calendar_weeks %}
+                {% for cell in week %}
+                    {% if cell is none %}
+                    <div class="cal-cell is-muted"></div>
+                    {% else %}
+                    <div class="cal-cell {% if cell.is_today %}is-today{% endif %}">
+                        <div class="cal-daynum">{{ cell.day }}</div>
+                        <div class="cal-events">
+                            {% for task in cell.tasks %}
+                            <a class="cal-chip {% if task.concluida %}is-done{% endif %}"
+                               href="{{ url_for('tasks.edit', id=task.id) }}"
+                               style="--chip: {{ task.subject.cor }};"
+                               title="{{ task.titulo }} · {{ task.subject.nome }}">
+                                {{ task.titulo }}
+                            </a>
+                            {% endfor %}
+                            {% for session in cell.sessions %}
+                            <span class="cal-chip is-session" style="--chip: {{ session.subject.cor }};" title="Sessão · {{ session.subject.nome }}">
+                                {{ session.subject.nome }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="view-panel" data-panel="list" hidden>
+        {% if all_tasks %}
+        <div class="table-responsive table-modern">
+            <table class="table table-hover mb-0 dashboard-table">
+                <thead>
+                    <tr>
+                        <th>Tarefa</th>
+                        <th>Matéria</th>
+                        <th>Prioridade</th>
+                        <th>Data Prevista</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in all_tasks %}
+                    <tr>
+                        <td class="{% if task.concluida %}text-decoration-line-through text-muted{% endif %}">{{ task.titulo }}</td>
+                        <td>
+                            <span class="status-pill" style="background-color: {{ task.subject.cor }}33; color: {{ task.subject.cor }};">
+                                {{ task.subject.nome }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if task.prioridade == 'alta' %}
+                            <span class="badge bg-danger">Alta</span>
+                            {% elif task.prioridade == 'media' %}
+                            <span class="badge bg-warning text-dark">Média</span>
+                            {% else %}
+                            <span class="badge bg-info">Baixa</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if task.data_prevista %}
+                                {% if task.data_prevista < today and not task.concluida %}
+                                <span class="text-danger">{{ task.data_prevista.strftime('%d/%m/%Y') }}</span>
+                                {% elif task.data_prevista == today %}
+                                <span class="text-warning fw-bold">Hoje</span>
+                                {% else %}
+                                <span class="text-muted">{{ task.data_prevista.strftime('%d/%m/%Y') }}</span>
+                                {% endif %}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="POST" action="{{ url_for('tasks.toggle', id=task.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-success" title="Concluir">&#10003;</button>
+                            </form>
+                            <a href="{{ url_for('tasks.edit', id=task.id) }}" class="btn btn-sm btn-outline-primary" title="Editar">&#9998;</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="workspace-empty">
+            <h5>Nenhuma tarefa cadastrada</h5>
+            <p>Crie tarefas para vê-las na lista e no calendário.</p>
+            <a href="{{ url_for('tasks.create') }}" class="btn btn-primary">Criar Tarefa</a>
+        </div>
+        {% endif %}
+    </section>
+
+    <section class="view-panel" data-panel="board" hidden>
+        <div class="board-grid">
+            {% for column in board_columns %}
+            <div class="board-col">
+                <div class="board-col-head">{{ column.title }} <span>{{ column.tasks|length }}</span></div>
+                {% for task in column.tasks %}
+                <a class="board-card" href="{{ url_for('tasks.edit', id=task.id) }}">
+                    <span class="board-dot" style="background: {{ task.subject.cor }};"></span>
+                    <span class="board-card-title">{{ task.titulo }}</span>
+                    <span class="board-card-meta">{{ task.subject.nome }}{% if task.data_prevista %} · {{ task.data_prevista.strftime('%d/%m') }}{% endif %}</span>
+                </a>
+                {% else %}
+                <p class="board-empty">Nenhum item</p>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </section>
 </div>
-{% elif not subjects %}
-<div class="text-center py-5 empty-state">
-    <h5 class="text-muted">Bem-vindo ao PlanejaENEM!</h5>
-    <p class="text-muted">Comece criando suas matérias de estudo.</p>
-    <a href="{{ url_for('subjects.create') }}" class="btn btn-primary">Criar Primeira Matéria</a>
-</div>
-{% else %}
-<div class="text-center py-5 empty-state">
-    <h5 class="text-muted">Nenhuma tarefa pendente!</h5>
-    <p class="text-muted">Tudo em dia. Aproveite para criar novas tarefas.</p>
-    <a href="{{ url_for('tasks.create') }}" class="btn btn-primary">Criar Tarefa</a>
-</div>
-{% endif %}
 {% endblock %}

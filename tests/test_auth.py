@@ -242,7 +242,7 @@ def test_create_task_filter_and_toggle(client):
     assert task.concluida is True
 
 
-def test_dashboard_shows_priority_summary_and_upcoming_tasks(client):
+def test_dashboard_shows_calendar_views_and_tasks(client):
     user = User(nome="Ana", email="ana@example.com")
     user.set_senha("Senha123")
     db.session.add(user)
@@ -289,7 +289,7 @@ def test_dashboard_shows_priority_summary_and_upcoming_tasks(client):
 
     response = client.get("/")
     assert response.status_code == 200
-    assert b"Prioridade" in response.data
-    assert b"Pr\xc3\xb3ximas tarefas" in response.data
+    assert b"Calend" in response.data
+    assert b"Quadro" in response.data
     assert b"Mapa mental" in response.data
     assert b"Alta" in response.data

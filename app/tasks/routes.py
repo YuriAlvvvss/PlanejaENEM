@@ -14,6 +14,7 @@ from app.tasks.forms import TaskForm
 def list_tasks():
     filter_status = request.args.get("status", "all")
     filter_subject = request.args.get("subject", type=int)
+    search_query = (request.args.get("q") or "").strip()
 
     query = Task.query.filter_by(user_id=current_user.id)
 
@@ -25,6 +26,10 @@ def list_tasks():
     if filter_subject:
         query = query.filter_by(subject_id=filter_subject)
 
+    if search_query:
+        like = f"%{search_query}%"
+        query = query.filter(Task.titulo.ilike(like))
+
     tasks = query.order_by(Task.data_prevista.asc().nullslast()).all()
     subjects = Subject.query.filter_by(user_id=current_user.id).order_by(Subject.nome).all()
 
@@ -34,6 +39,7 @@ def list_tasks():
         subjects=subjects,
         filter_status=filter_status,
         filter_subject=filter_subject,
+        search_query=search_query,
         today=date.today(),
     )
 
