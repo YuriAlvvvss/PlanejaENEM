@@ -7,8 +7,9 @@
         <div class="card-body">
             <div class="text-center mb-4">
                 <span class="brand-mark d-inline-flex mx-auto mb-3">P</span>
+                <div class="eyebrow">Acesso</div>
                 <h3 class="mb-1">Bem-vindo de volta!</h3>
-                <p class="text-muted mb-0">Acesse sua conta para continuar.</p>
+                <p class="text-muted mb-0">Continue planejando seus estudos com foco.</p>
             </div>
             <form method="POST" novalidate>
                 {{ form.hidden_tag() }}
@@ -30,9 +31,9 @@
                     </div>
                     {% endif %}
                 </div>
-                {{ form.submit(class="btn btn-primary w-100 mb-2", value="Entrar") }}
+                {{ form.submit(class="btn btn-primary w-100 mb-3", value="Entrar") }}
                 <div class="text-center text-muted small">
-                    Não tem conta? <a href="{{ url_for('auth.register') }}" class="link-primary">Registre-se</a>
+                    Não tem conta? <a href="{{ url_for('auth.register') }}" class="link-primary">Crie uma agora</a>
                 </div>
             </form>
         </div>

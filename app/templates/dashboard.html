@@ -2,34 +2,98 @@
 {% block title %}Dashboard - PlanejaENEM{% endblock %}
 
 {% block content %}
-<div class="kpi-strip" aria-label="Indicadores">
-    <div class="kpi">
-        <span class="kpi-label">Matérias</span>
-        <span class="kpi-value">{{ subjects|length }}</span>
+<div class="dashboard-shell">
+    <div class="hero-panel">
+        <div>
+            <div class="eyebrow">Resumo semanal</div>
+            <h2>Seu ritmo de estudos</h2>
+        </div>
+        <div class="hero-chip">{{ today.strftime('%d/%m/%Y') }}</div>
     </div>
-    <div class="kpi">
-        <span class="kpi-label">Pendentes</span>
-        <span class="kpi-value">{{ pending_tasks|length }}</span>
-    </div>
-    <div class="kpi">
-        <span class="kpi-label">Concluídas</span>
-        <span class="kpi-value">{{ completed_tasks }}</span>
-    </div>
-    <div class="kpi">
-        <span class="kpi-label">Atrasadas</span>
-        <span class="kpi-value kpi-value--alert">{{ overdue_tasks }}</span>
-    </div>
-    <div class="kpi">
-        <span class="kpi-label">Hoje</span>
-        <span class="kpi-value">{{ todays_tasks }}</span>
-    </div>
-    <div class="kpi kpi--date">
-        <span class="kpi-label">Data</span>
-        <span class="kpi-meta">{{ today.strftime('%d/%m/%Y') }}</span>
-    </div>
-</div>
 
-<div class="workspace">
+    <div class="insight-grid">
+        <div class="insight-card insight-card--primary">
+            <span class="insight-label">🎯 Meta do dia</span>
+            <strong>{{ todays_tasks }}</strong>
+            <small>tarefas programadas</small>
+        </div>
+        <div class="insight-card">
+            <span class="insight-label">✓ Progresso</span>
+            <strong>{{ completed_tasks }}</strong>
+            <small>tarefas concluídas</small>
+        </div>
+        <div class="insight-card">
+            <span class="insight-label">📚 Foco</span>
+            <strong>{{ subjects[0].nome if subjects else 'N/A' }}</strong>
+            <small>matéria principal</small>
+        </div>
+    </div>
+
+    <div class="productivity-metrics">
+        <div class="metric-card">
+            <div class="metric-icon">📊</div>
+            <div class="metric-content">
+                <span class="metric-label">Taxa de conclusão</span>
+                <div class="metric-bar">
+                    <div class="metric-fill" style="width: {% if completed_tasks and all_tasks %}{{ (completed_tasks / (all_tasks|length + 0.001) * 100)|int }}{% else %}0{% endif %}%"></div>
+                </div>
+                <span class="metric-value">{% if completed_tasks and all_tasks %}{{ (completed_tasks / (all_tasks|length + 0.001) * 100)|int }}%{% else %}0%{% endif %}</span>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon">⏰</div>
+            <div class="metric-content">
+                <span class="metric-label">Atividade esta semana</span>
+                <span class="metric-badge">{{ pending_tasks|length }} pendentes</span>
+                <span class="metric-value">+{{ todays_tasks }} hoje</span>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon">🔥</div>
+            <div class="metric-content">
+                <span class="metric-label">Sequência de estudos</span>
+                <span class="metric-streak">Ótimo ritmo!</span>
+                <span class="metric-value">Mantenha o foco</span>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon">🎓</div>
+            <div class="metric-content">
+                <span class="metric-label">Cobertura de matérias</span>
+                <span class="metric-badge">{{ subjects|length }} ativas</span>
+                <span class="metric-value">Bem distribuído</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="kpi-strip" aria-label="Indicadores">
+        <div class="kpi">
+            <span class="kpi-label">Matérias</span>
+            <span class="kpi-value">{{ subjects|length }}</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-label">Pendentes</span>
+            <span class="kpi-value">{{ pending_tasks|length }}</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-label">Concluídas</span>
+            <span class="kpi-value">{{ completed_tasks }}</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-label">Atrasadas</span>
+            <span class="kpi-value kpi-value--alert">{{ overdue_tasks }}</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-label">Hoje</span>
+            <span class="kpi-value">{{ todays_tasks }}</span>
+        </div>
+        <div class="kpi kpi--date">
+            <span class="kpi-label">Data</span>
+            <span class="kpi-meta">{{ today.strftime('%d/%m/%Y') }}</span>
+        </div>
+    </div>
+
+    <div class="workspace">
     <div class="view-toolbar">
         <div class="view-tabs" role="tablist" aria-label="Visualização">
             <button type="button" class="view-tab is-active" data-view="calendar" role="tab" aria-selected="true">Calendário</button>
@@ -174,5 +238,6 @@
             {% endfor %}
         </div>
     </section>
+    </div>
 </div>
 {% endblock %}

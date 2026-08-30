@@ -5,11 +5,11 @@
 <div class="confirm-card card border-danger">
     <div class="card-body text-center">
         <div class="mb-3">
-            <span class="badge bg-danger-subtle text-danger p-2 px-3">Atenção</span>
+            <span class="status-pill" style="background: rgba(255, 106, 122, 0.12); color: #ffb1bb;">Atenção</span>
         </div>
         <h4 class="text-danger mb-3">Confirmar exclusão</h4>
         <p class="mb-2">Tem certeza que deseja excluir a matéria <strong>{{ subject.nome }}</strong>?</p>
-        <p class="text-muted small mb-4">Esta ação não pode ser desfeita.</p>
+        <p class="text-muted small mb-4">Esta ação não pode ser desfeita e removerá o histórico relacionado.</p>
         <div class="d-flex justify-content-center gap-2">
             <form method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

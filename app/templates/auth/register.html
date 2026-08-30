@@ -7,8 +7,9 @@
         <div class="card-body">
             <div class="text-center mb-4">
                 <span class="brand-mark d-inline-flex mx-auto mb-3">P</span>
-                <h3 class="mb-1">Criar Conta</h3>
-                <p class="text-muted mb-0">Comece a organizar seus estudos.</p>
+                <div class="eyebrow">Cadastro</div>
+                <h3 class="mb-1">Crie sua conta</h3>
+                <p class="text-muted mb-0">Organize seus estudos e acompanhe seu progresso.</p>
             </div>
             <form method="POST" novalidate>
                 {{ form.hidden_tag() }}
@@ -49,7 +50,7 @@
                     {% endif %}
                 </div>
                 <div class="d-grid mt-4">
-                    {{ form.submit(class="btn btn-success btn-lg", value="Criar Conta") }}
+                    {{ form.submit(class="btn btn-primary btn-lg", value="Criar Conta") }}
                 </div>
             </form>
             <p class="text-center mt-4 mb-0 text-muted small">

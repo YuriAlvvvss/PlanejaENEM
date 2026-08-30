@@ -11,7 +11,7 @@
 
 <div class="row g-4">
     <div class="col-lg-6">
-        <div class="card">
+        <div class="card h-100">
             <div class="card-body">
                 <h3 class="card-title mb-4">Dados pessoais</h3>
                 <form method="POST">
@@ -30,7 +30,7 @@
                         <div class="text-danger small">{{ error }}</div>
                         {% endfor %}
                     </div>
-                    <div class="d-grid">
+                    <div class="d-grid mt-4">
                         {{ profile_form.submit(class="btn btn-primary") }}
                     </div>
                 </form>
@@ -39,7 +39,7 @@
     </div>
 
     <div class="col-lg-6">
-        <div class="card">
+        <div class="card h-100">
             <div class="card-body">
                 <h3 class="card-title mb-4">Alterar senha</h3>
                 <form method="POST">
@@ -65,7 +65,7 @@
                         <div class="text-danger small">{{ error }}</div>
                         {% endfor %}
                     </div>
-                    <div class="d-grid">
+                    <div class="d-grid mt-4">
                         {{ password_form.submit(class="btn btn-success") }}
                     </div>
                 </form>
