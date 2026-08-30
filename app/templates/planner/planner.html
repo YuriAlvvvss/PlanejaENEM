@@ -128,6 +128,7 @@
                                 <td>{{ session.start_time.strftime('%H:%M') }} - {{ session.end_time.strftime('%H:%M') }}</td>
                                 <td>{{ session.duration_minutes }} min</td>
                                 <td>
+                                    <div class="d-flex gap-2 align-items-center flex-wrap">
                                     <form method="POST" action="{{ url_for('planner.update_manual', id=session.id) }}" class="d-flex gap-2 align-items-center">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <select class="form-select form-select-sm" name="subject_id">
@@ -139,6 +140,14 @@
                                             <i class="bi bi-check"></i>
                                         </button>
                                     </form>
+                                    <form method="POST" action="{{ url_for('main.toggle_session', id=session.id) }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="next" value="{{ url_for('planner.planner') }}">
+                                        <button type="submit" class="btn btn-sm {% if session.completed %}btn-success{% else %}btn-outline-success{% endif %}" title="{% if session.completed %}Reabrir sessão{% else %}Marcar como estudada{% endif %}">
+                                            <i class="bi {% if session.completed %}bi-check2-circle{% else %}bi-circle{% endif %}"></i>
+                                        </button>
+                                    </form>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}

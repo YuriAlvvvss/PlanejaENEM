@@ -4,9 +4,17 @@ from flask import flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.extensions import db
+from app.main.stats import mark_task_completion
 from app.models import Subject, Task
 from app.tasks import tasks_bp
 from app.tasks.forms import TaskForm
+
+
+def _safe_next_url():
+    candidate = request.form.get("next") or request.args.get("next")
+    if candidate and candidate.startswith("/") and not candidate.startswith("//"):
+        return candidate
+    return url_for("tasks.list_tasks")
 
 
 @tasks_bp.route("/")
@@ -67,8 +75,8 @@ def create():
             user_id=current_user.id,
             data_prevista=form.data_prevista.data,
             prioridade=form.prioridade.data,
-            concluida=concluida,
         )
+        mark_task_completion(task, concluida)
         db.session.add(task)
         db.session.commit()
         flash("Tarefa criada com sucesso!", "success")
@@ -96,7 +104,7 @@ def edit(id):
         task.subject_id = form.subject_id.data
         task.data_prevista = form.data_prevista.data
         task.prioridade = form.prioridade.data
-        task.concluida = concluida
+        mark_task_completion(task, concluida)
         db.session.commit()
         flash("Tarefa atualizada!", "success")
         return redirect(url_for("tasks.list_tasks"))
@@ -123,9 +131,9 @@ def delete(id):
 def toggle(id):
     task = Task.query.filter_by(user_id=current_user.id).filter_by(id=id).first_or_404()
 
-    task.concluida = not task.concluida
+    mark_task_completion(task, not task.concluida)
     db.session.commit()
 
     status = "concluída" if task.concluida else "reaberta"
     flash(f"Tarefa {status}!", "success")
-    return redirect(url_for("tasks.list_tasks"))
+    return redirect(_safe_next_url())

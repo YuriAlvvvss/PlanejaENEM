@@ -1,8 +1,10 @@
 import re
 
 from flask_wtf import FlaskForm
-from wtforms import IntegerField, SelectField, StringField, SubmitField
-from wtforms.validators import DataRequired, Length, NumberRange, ValidationError
+from wtforms import SelectField, StringField, SubmitField
+from wtforms.validators import DataRequired, Length, ValidationError
+
+from app.areas import ENEM_AREAS
 
 
 class SubjectForm(FlaskForm):
@@ -20,6 +22,7 @@ class SubjectForm(FlaskForm):
         default="3",
         coerce=int,
     )
+    area = SelectField("Área do ENEM", choices=ENEM_AREAS, default="outro")
     submit = SubmitField("Salvar")
 
     def validate_nome(self, field):

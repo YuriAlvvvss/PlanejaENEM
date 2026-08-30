@@ -1,210 +1,218 @@
 {% extends "base.html" %}
 {% block title %}Dashboard - PlanejaENEM{% endblock %}
 
+{% macro task_item(task, show_date=true) %}
+<a class="routine-item" href="{{ url_for('tasks.edit', id=task.id) }}">
+    <span class="board-dot" style="background: {{ task.subject.cor }};"></span>
+    <span class="routine-item-body">
+        <strong>{{ task.titulo }}</strong>
+        <small>{{ task.subject.nome }}{% if show_date and task.data_prevista %} · {{ task.data_prevista.strftime('%d/%m') }}{% endif %}</small>
+    </span>
+    {% if task.prioridade == 'alta' %}
+    <span class="badge bg-danger">Alta</span>
+    {% elif task.prioridade == 'media' %}
+    <span class="badge bg-warning text-dark">Média</span>
+    {% else %}
+    <span class="badge bg-info">Baixa</span>
+    {% endif %}
+</a>
+{% endmacro %}
+
 {% block content %}
 <div class="dashboard-shell">
     <div class="hero-panel">
         <div>
-            <div class="eyebrow">Resumo semanal</div>
+            <div class="eyebrow">Desempenho e rotina</div>
             <h2>Seu ritmo de estudos</h2>
         </div>
-        <div class="hero-chip">{{ today.strftime('%d/%m/%Y') }}</div>
+        <div class="hero-actions">
+            <div class="hero-chip streak-chip" title="Dias seguidos com estudo registrado">
+                🔥 {{ streak }} {% if streak == 1 %}dia{% else %}dias{% endif %}
+            </div>
+            <div class="hero-chip">{{ today.strftime('%d/%m/%Y') }}</div>
+        </div>
     </div>
 
-    <div class="insight-grid">
+    <div class="insight-grid insight-grid--metrics">
         <div class="insight-card insight-card--primary">
-            <span class="insight-label">🎯 Meta do dia</span>
-            <strong>{{ todays_tasks }}</strong>
-            <small>tarefas programadas</small>
+            <span class="insight-label">Horas planejadas</span>
+            <strong>{{ planned_hours_label }}</strong>
+            <small>nesta semana</small>
         </div>
         <div class="insight-card">
-            <span class="insight-label">✓ Progresso</span>
-            <strong>{{ completed_tasks }}</strong>
-            <small>tarefas concluídas</small>
+            <span class="insight-label">Horas concluídas</span>
+            <strong>{{ completed_hours_label }}</strong>
+            <small>sessões marcadas como estudadas</small>
         </div>
         <div class="insight-card">
-            <span class="insight-label">📚 Foco</span>
-            <strong>{{ subjects[0].nome if subjects else 'N/A' }}</strong>
-            <small>matéria principal</small>
+            <span class="insight-label">Progresso semanal</span>
+            <strong>{{ weekly_progress }}%</strong>
+            <div class="metric-bar"><div class="metric-fill" style="width: {{ weekly_progress }}%;"></div></div>
+            <small>em relação à meta</small>
+        </div>
+        <div class="insight-card">
+            <span class="insight-label">Meta semanal</span>
+            <strong>{{ goal_hours_label }}</strong>
+            <form method="POST" action="{{ url_for('main.weekly_goal') }}" class="goal-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="number" name="weekly_goal_hours" min="1" max="80" step="0.5" value="{{ goal_hours_input }}" aria-label="Meta semanal em horas">
+                <button type="submit" class="btn btn-sm btn-outline-primary">Salvar</button>
+            </form>
         </div>
     </div>
 
-    <div class="productivity-metrics">
-        <div class="metric-card">
-            <div class="metric-icon">📊</div>
-            <div class="metric-content">
-                <span class="metric-label">Taxa de conclusão</span>
-                <div class="metric-bar">
-                    <div class="metric-fill" style="width: {% if completed_tasks and all_tasks %}{{ (completed_tasks / (all_tasks|length + 0.001) * 100)|int }}{% else %}0{% endif %}%"></div>
-                </div>
-                <span class="metric-value">{% if completed_tasks and all_tasks %}{{ (completed_tasks / (all_tasks|length + 0.001) * 100)|int }}%{% else %}0%{% endif %}</span>
-            </div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-icon">⏰</div>
-            <div class="metric-content">
-                <span class="metric-label">Atividade esta semana</span>
-                <span class="metric-badge">{{ pending_tasks|length }} pendentes</span>
-                <span class="metric-value">+{{ todays_tasks }} hoje</span>
-            </div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-icon">🔥</div>
-            <div class="metric-content">
-                <span class="metric-label">Sequência de estudos</span>
-                <span class="metric-streak">Ótimo ritmo!</span>
-                <span class="metric-value">Mantenha o foco</span>
-            </div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-icon">🎓</div>
-            <div class="metric-content">
-                <span class="metric-label">Cobertura de matérias</span>
-                <span class="metric-badge">{{ subjects|length }} ativas</span>
-                <span class="metric-value">Bem distribuído</span>
-            </div>
-        </div>
-    </div>
-
-    <div class="kpi-strip" aria-label="Indicadores">
+    <div class="kpi-strip" aria-label="Indicadores da rotina">
         <div class="kpi">
-            <span class="kpi-label">Matérias</span>
-            <span class="kpi-value">{{ subjects|length }}</span>
+            <span class="kpi-label">Streak</span>
+            <span class="kpi-value">{{ streak }}</span>
         </div>
         <div class="kpi">
-            <span class="kpi-label">Pendentes</span>
-            <span class="kpi-value">{{ pending_tasks|length }}</span>
+            <span class="kpi-label">Hoje</span>
+            <span class="kpi-value">{{ todays_tasks|length }}</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-label">Atrasadas</span>
+            <span class="kpi-value kpi-value--alert">{{ overdue_tasks|length }}</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-label">Revisões</span>
+            <span class="kpi-value">{{ (upcoming_reviews|length) + (overdue_reviews|length) }}</span>
         </div>
         <div class="kpi">
             <span class="kpi-label">Concluídas</span>
             <span class="kpi-value">{{ completed_tasks }}</span>
         </div>
-        <div class="kpi">
-            <span class="kpi-label">Atrasadas</span>
-            <span class="kpi-value kpi-value--alert">{{ overdue_tasks }}</span>
-        </div>
-        <div class="kpi">
-            <span class="kpi-label">Hoje</span>
-            <span class="kpi-value">{{ todays_tasks }}</span>
-        </div>
         <div class="kpi kpi--date">
-            <span class="kpi-label">Data</span>
-            <span class="kpi-meta">{{ today.strftime('%d/%m/%Y') }}</span>
+            <span class="kpi-label">Tarefas</span>
+            <span class="kpi-meta">{{ all_tasks_count }} no total</span>
         </div>
     </div>
 
-    <div class="workspace">
-    <div class="view-toolbar">
-        <div class="view-tabs" role="tablist" aria-label="Visualização">
-            <button type="button" class="view-tab is-active" data-view="calendar" role="tab" aria-selected="true">Calendário</button>
-            <button type="button" class="view-tab" data-view="list" role="tab" aria-selected="false">Lista</button>
-            <button type="button" class="view-tab" data-view="board" role="tab" aria-selected="false">Quadro</button>
-        </div>
-        <div class="cal-month-label">{{ calendar_month_label }}</div>
-    </div>
-
-    {% if subjects %}
-    <div class="subject-legend" aria-label="Matérias">
-        {% for subject in subjects %}
-        <span class="legend-item">
-            <span class="legend-dot" style="background: {{ subject.cor }};"></span>
-            {{ subject.nome }}
-        </span>
-        {% endfor %}
+    {% if not subjects %}
+    <div class="workspace-empty">
+        <h5>Bem-vindo ao PlanejaENEM!</h5>
+        <p>Crie matérias e um cronograma para acompanhar horas, streak e progresso por área.</p>
+        <a href="{{ url_for('subjects.create') }}" class="btn btn-primary">Criar primeira matéria</a>
     </div>
     {% endif %}
 
-    <section class="view-panel" data-panel="calendar">
-        {% if not subjects %}
-        <div class="workspace-empty">
-            <h5>Bem-vindo ao PlanejaENEM!</h5>
-            <p>Comece criando suas matérias de estudo para preencher o calendário.</p>
-            <a href="{{ url_for('subjects.create') }}" class="btn btn-primary">Criar Primeira Matéria</a>
-        </div>
-        {% endif %}
-        <div class="cal-grid" aria-label="Calendário do mês">
-            {% for label in weekday_labels %}
-            <div class="cal-dow">{{ label }}</div>
-            {% endfor %}
-            {% for week in calendar_weeks %}
-                {% for cell in week %}
-                    {% if cell is none %}
-                    <div class="cal-cell is-muted"></div>
-                    {% else %}
-                    <div class="cal-cell {% if cell.is_today %}is-today{% endif %}">
-                        <div class="cal-daynum">{{ cell.day }}</div>
-                        <div class="cal-events">
-                            {% for task in cell.tasks %}
-                            <a class="cal-chip {% if task.concluida %}is-done{% endif %}"
-                               href="{{ url_for('tasks.edit', id=task.id) }}"
-                               style="--chip: {{ task.subject.cor }};"
-                               title="{{ task.titulo }} · {{ task.subject.nome }}">
-                                {{ task.titulo }}
-                            </a>
-                            {% endfor %}
-                            {% for session in cell.sessions %}
-                            <span class="cal-chip is-session" style="--chip: {{ session.subject.cor }};" title="Sessão · {{ session.subject.nome }}">
-                                {{ session.subject.nome }}
-                            </span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endif %}
-                {% endfor %}
-            {% endfor %}
-        </div>
-    </section>
+    <div class="chart-grid">
+        <section class="chart-card">
+            <h3>Horas estudadas por semana</h3>
+            <p>Planejado versus concluído nas últimas 8 semanas.</p>
+            <div class="chart-frame"><canvas id="chartHoursWeek" aria-label="Gráfico de horas por semana"></canvas></div>
+        </section>
+        <section class="chart-card">
+            <h3>Tempo por matéria</h3>
+            <p>Horas concluídas em cada disciplina.</p>
+            <div class="chart-frame"><canvas id="chartTimeSubject" aria-label="Gráfico de tempo por matéria"></canvas></div>
+        </section>
+        <section class="chart-card">
+            <h3>Progresso por área</h3>
+            <p>Percentual de tarefas concluídas nas áreas do ENEM.</p>
+            <div class="chart-frame"><canvas id="chartAreaProgress" aria-label="Gráfico de progresso por área"></canvas></div>
+        </section>
+        <section class="chart-card">
+            <h3>Evolução do desempenho</h3>
+            <p>Taxa de conclusão das tarefas com prazo em cada semana.</p>
+            <div class="chart-frame"><canvas id="chartEvolution" aria-label="Gráfico de evolução do desempenho"></canvas></div>
+        </section>
+    </div>
 
-    <section class="view-panel" data-panel="list" hidden>
-        {% if all_tasks %}
+    <div class="routine-grid">
+        <section class="routine-card">
+            <header>
+                <h3>Tarefas de hoje</h3>
+                <span>{{ todays_tasks|length }}</span>
+            </header>
+            {% if todays_tasks %}
+                {% for task in todays_tasks %}
+                    {{ task_item(task, false) }}
+                {% endfor %}
+            {% else %}
+            <p class="routine-empty">Nenhuma tarefa para hoje.</p>
+            {% endif %}
+        </section>
+        <section class="routine-card">
+            <header>
+                <h3>Tarefas atrasadas</h3>
+                <span>{{ overdue_tasks|length }}</span>
+            </header>
+            {% if overdue_tasks %}
+                {% for task in overdue_tasks[:8] %}
+                    {{ task_item(task) }}
+                {% endfor %}
+            {% else %}
+            <p class="routine-empty">Nenhuma tarefa atrasada.</p>
+            {% endif %}
+        </section>
+        <section class="routine-card">
+            <header>
+                <h3>Próximas revisões</h3>
+                <span>{{ (upcoming_reviews|length) + (overdue_reviews|length) }}</span>
+            </header>
+            {% if overdue_reviews or upcoming_reviews %}
+                {% for task in overdue_reviews %}
+                <div class="routine-review is-overdue">
+                    {{ task_item(task, false) }}
+                    <small class="review-date">Revisão atrasada · {{ task.next_review_date.strftime('%d/%m') }}</small>
+                </div>
+                {% endfor %}
+                {% for task in upcoming_reviews %}
+                <div class="routine-review">
+                    {{ task_item(task, false) }}
+                    <small class="review-date">Revisar em {{ task.next_review_date.strftime('%d/%m') }}</small>
+                </div>
+                {% endfor %}
+            {% else %}
+            <p class="routine-empty">Conclua tarefas para gerar revisões automáticas.</p>
+            {% endif %}
+        </section>
+        <section class="routine-card">
+            <header>
+                <h3>Próximos 14 dias</h3>
+                <span>{{ upcoming_tasks|length }}</span>
+            </header>
+            {% if upcoming_tasks %}
+                {% for task in upcoming_tasks[:8] %}
+                    {{ task_item(task) }}
+                {% endfor %}
+            {% else %}
+            <p class="routine-empty">Sem tarefas futuras nesta janela.</p>
+            {% endif %}
+        </section>
+    </div>
+
+    <section class="routine-card sessions-card">
+        <header>
+            <h3>Sessões de hoje</h3>
+            <span>{{ todays_sessions|length }}</span>
+        </header>
+        {% if todays_sessions %}
         <div class="table-responsive table-modern">
             <table class="table table-hover mb-0 dashboard-table">
                 <thead>
                     <tr>
-                        <th>Tarefa</th>
                         <th>Matéria</th>
-                        <th>Prioridade</th>
-                        <th>Data Prevista</th>
-                        <th>Ações</th>
+                        <th>Horário</th>
+                        <th>Duração</th>
+                        <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for task in all_tasks %}
+                    {% for session in todays_sessions %}
                     <tr>
-                        <td class="{% if task.concluida %}text-decoration-line-through text-muted{% endif %}">{{ task.titulo }}</td>
+                        <td>{{ session.subject.nome }}</td>
+                        <td>{{ session.start_time.strftime('%H:%M') }} – {{ session.end_time.strftime('%H:%M') }}</td>
+                        <td>{{ session.duration_minutes }} min</td>
                         <td>
-                            <span class="status-pill" style="background-color: {{ task.subject.cor }}33; color: {{ task.subject.cor }};">
-                                {{ task.subject.nome }}
-                            </span>
-                        </td>
-                        <td>
-                            {% if task.prioridade == 'alta' %}
-                            <span class="badge bg-danger">Alta</span>
-                            {% elif task.prioridade == 'media' %}
-                            <span class="badge bg-warning text-dark">Média</span>
-                            {% else %}
-                            <span class="badge bg-info">Baixa</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if task.data_prevista %}
-                                {% if task.data_prevista < today and not task.concluida %}
-                                <span class="text-danger">{{ task.data_prevista.strftime('%d/%m/%Y') }}</span>
-                                {% elif task.data_prevista == today %}
-                                <span class="text-warning fw-bold">Hoje</span>
-                                {% else %}
-                                <span class="text-muted">{{ task.data_prevista.strftime('%d/%m/%Y') }}</span>
-                                {% endif %}
-                            {% else %}
-                            <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <form method="POST" action="{{ url_for('tasks.toggle', id=task.id) }}" class="d-inline">
+                            <form method="POST" action="{{ url_for('main.toggle_session', id=session.id) }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-sm btn-outline-success" title="Concluir">&#10003;</button>
+                                <input type="hidden" name="next" value="{{ url_for('main.dashboard') }}">
+                                <button type="submit" class="btn btn-sm {% if session.completed %}btn-success{% else %}btn-outline-success{% endif %}">
+                                    {% if session.completed %}Concluída{% else %}Marcar como estudada{% endif %}
+                                </button>
                             </form>
-                            <a href="{{ url_for('tasks.edit', id=task.id) }}" class="btn btn-sm btn-outline-primary" title="Editar">&#9998;</a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -212,32 +220,14 @@
             </table>
         </div>
         {% else %}
-        <div class="workspace-empty">
-            <h5>Nenhuma tarefa cadastrada</h5>
-            <p>Crie tarefas para vê-las na lista e no calendário.</p>
-            <a href="{{ url_for('tasks.create') }}" class="btn btn-primary">Criar Tarefa</a>
-        </div>
+        <p class="routine-empty mb-0">Nenhuma sessão no cronograma para hoje. Gere o plano em Cronograma e marque as sessões como estudadas para contar horas concluídas e o streak.</p>
         {% endif %}
     </section>
-
-    <section class="view-panel" data-panel="board" hidden>
-        <div class="board-grid">
-            {% for column in board_columns %}
-            <div class="board-col">
-                <div class="board-col-head">{{ column.title }} <span>{{ column.tasks|length }}</span></div>
-                {% for task in column.tasks %}
-                <a class="board-card" href="{{ url_for('tasks.edit', id=task.id) }}">
-                    <span class="board-dot" style="background: {{ task.subject.cor }};"></span>
-                    <span class="board-card-title">{{ task.titulo }}</span>
-                    <span class="board-card-meta">{{ task.subject.nome }}{% if task.data_prevista %} · {{ task.data_prevista.strftime('%d/%m') }}{% endif %}</span>
-                </a>
-                {% else %}
-                <p class="board-empty">Nenhum item</p>
-                {% endfor %}
-            </div>
-            {% endfor %}
-        </div>
-    </section>
-    </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script id="dashboard-charts-data" type="application/json">{{ charts | tojson }}</script>
+<script src="{{ url_for('static', filename='dashboard-charts.js') }}"></script>
 {% endblock %}

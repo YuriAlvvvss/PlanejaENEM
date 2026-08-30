@@ -30,7 +30,7 @@
                     </div>
                 </div>
 
-                <small class="text-muted d-block mb-3">{{ subject.completed_tasks }}/{{ subject.total_tasks }} tarefas concluídas</small>
+                                <small class="text-muted d-block mb-3">{{ subject.area_label }} · {{ subject.completed_tasks }}/{{ subject.total_tasks }} tarefas concluídas</small>
 
                 <div class="d-flex gap-2">
                     <a href="{{ url_for('subjects.edit', id=subject.id) }}" class="btn btn-outline-primary btn-sm flex-fill">Editar</a>

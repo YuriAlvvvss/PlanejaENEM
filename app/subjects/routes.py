@@ -1,6 +1,7 @@
 from flask import flash, redirect, render_template, url_for
 from flask_login import current_user, login_required
 
+from app.areas import infer_area
 from app.extensions import db
 from app.models import Subject
 from app.subjects import subjects_bp
@@ -19,11 +20,15 @@ def list_subjects():
 def create():
     form = SubjectForm()
     if form.validate_on_submit():
+        area = form.area.data or "outro"
+        if area == "outro":
+            area = infer_area(form.nome.data)
         subject = Subject(
             nome=form.nome.data,
             cor=form.cor.data,
             prioridade=form.prioridade.data or 3,
             dificuldade=form.dificuldade.data or 3,
+            area=area,
             user_id=current_user.id,
         )
         db.session.add(subject)
@@ -45,6 +50,7 @@ def edit(id):
         subject.cor = form.cor.data
         subject.prioridade = form.prioridade.data or 3
         subject.dificuldade = form.dificuldade.data or 3
+        subject.area = form.area.data or infer_area(form.nome.data)
         db.session.commit()
         flash("Matéria atualizada!", "success")
         return redirect(url_for("subjects.list_subjects"))

@@ -201,7 +201,7 @@ def test_create_subject_and_dashboard_summary(client):
 
     dashboard = client.get("/")
     assert dashboard.status_code == 200
-    assert b"Matem\xc3\xa1tica" in dashboard.data
+    assert b"Matem\\u00e1tica" in dashboard.data
 
 
 def test_create_task_filter_and_toggle(client):
@@ -242,7 +242,7 @@ def test_create_task_filter_and_toggle(client):
     assert task.concluida is True
 
 
-def test_dashboard_shows_calendar_views_and_tasks(client):
+def test_dashboard_shows_performance_and_routine(client):
     user = User(nome="Ana", email="ana@example.com")
     user.set_senha("Senha123")
     db.session.add(user)
@@ -289,7 +289,14 @@ def test_dashboard_shows_calendar_views_and_tasks(client):
 
     response = client.get("/")
     assert response.status_code == 200
-    assert b"Calend" in response.data
-    assert b"Quadro" in response.data
+    assert b"Horas planejadas" in response.data
+    assert b"Horas conclu" in response.data
+    assert b"Progresso semanal" in response.data
+    assert b"Tarefas de hoje" in response.data
+    assert b"Tarefas atrasadas" in response.data
+    assert b"Pr\xc3\xb3ximas revis" in response.data
+    assert b"Meta semanal" in response.data
+    assert b"chart.js" in response.data
+    assert b"Calend" not in response.data
     assert b"Mapa mental" in response.data
     assert b"Alta" in response.data

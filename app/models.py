@@ -13,6 +13,7 @@ class User(UserMixin, db.Model):
     nome = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(120), unique=True, index=True, nullable=False)
     senha_hash = db.Column(db.String(256), nullable=False)
+    weekly_goal_minutes = db.Column(db.Integer, nullable=False, default=600)
     data_criacao = db.Column(
         db.DateTime, default=lambda: datetime.now(timezone.utc)
     )
@@ -54,6 +55,7 @@ class Subject(db.Model):
     cor = db.Column(db.String(7), nullable=False, default="#007bff")
     prioridade = db.Column(db.Integer, nullable=False, default=1)
     dificuldade = db.Column(db.Integer, nullable=False, default=3)
+    area = db.Column(db.String(20), nullable=False, default="outro")
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     data_criacao = db.Column(
         db.DateTime, default=lambda: datetime.now(timezone.utc)
@@ -80,6 +82,13 @@ class Subject(db.Model):
     def priority_score(self):
         return max(1, int(self.prioridade or 1)) * (int(self.dificuldade or 1) + 1)
 
+    @property
+    def area_label(self):
+        from app.areas import area_label, infer_area
+
+        key = self.area if self.area and self.area != "outro" else infer_area(self.nome)
+        return area_label(key)
+
     def __repr__(self):
         return f"<Subject {self.nome}>"
 
@@ -104,6 +113,8 @@ class Task(db.Model):
     prioridade = db.Column(
         db.String(10), nullable=False, default="media"
     )  # baixa, media, alta
+    completed_at = db.Column(db.DateTime, nullable=True)
+    next_review_date = db.Column(db.Date, nullable=True)
     data_criacao = db.Column(
         db.DateTime, default=lambda: datetime.now(timezone.utc)
     )
@@ -168,6 +179,8 @@ class StudySession(db.Model):
     start_time = db.Column(db.Time, nullable=False)
     end_time = db.Column(db.Time, nullable=False)
     duration_minutes = db.Column(db.Integer, nullable=False, default=60)
+    completed = db.Column(db.Boolean, nullable=False, default=False)
+    completed_at = db.Column(db.DateTime, nullable=True)
     priority_score = db.Column(db.Integer, nullable=False, default=0)
     manual_override = db.Column(db.Boolean, nullable=False, default=False)
     notes = db.Column(db.Text, nullable=True)

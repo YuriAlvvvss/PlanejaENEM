@@ -70,4 +70,27 @@ document.addEventListener("DOMContentLoaded", () => {
             closeSidebar();
         }
     });
+
+    const sidebarCollapseBtn = document.querySelector("[data-sidebar-collapse]");
+    const COLLAPSE_KEY = "planejaenem-sidebar-collapsed";
+
+    const applyCollapseState = (collapsed) => {
+        document.body.classList.toggle("sidebar-collapsed", collapsed);
+        if (sidebarCollapseBtn) {
+            sidebarCollapseBtn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+            sidebarCollapseBtn.setAttribute(
+                "aria-label",
+                collapsed ? "Expandir menu lateral" : "Recolher menu lateral"
+            );
+        }
+    };
+
+    if (sidebarCollapseBtn) {
+        applyCollapseState(localStorage.getItem(COLLAPSE_KEY) === "1");
+        sidebarCollapseBtn.addEventListener("click", () => {
+            const next = !document.body.classList.contains("sidebar-collapsed");
+            applyCollapseState(next);
+            localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
+        });
+    }
 });

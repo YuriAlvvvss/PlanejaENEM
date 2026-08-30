@@ -81,6 +81,18 @@ class TestingConfig(Config):
     WTF_CSRF_ENABLED = False
 
 
+def _sqlite_columns(connection, table_name):
+    rows = connection.execute(f"PRAGMA table_info({table_name})").fetchall()
+    return {row[1] for row in rows}
+
+
+def _add_missing_column(connection, table_name, column_name, ddl):
+    columns = _sqlite_columns(connection, table_name)
+    if not columns or column_name in columns:
+        return
+    connection.execute(f"ALTER TABLE {table_name} ADD COLUMN {ddl}")
+
+
 def migrate_legacy_database(app):
     """Add missing columns to SQLite databases created before schema evolution."""
     database_uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
@@ -92,17 +104,41 @@ def migrate_legacy_database(app):
         return
 
     with sqlite3.connect(db_path) as connection:
-        columns = {
-            row[1]
-            for row in connection.execute("PRAGMA table_info(subjects)").fetchall()
+        tables = {
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
         }
-        if "prioridade" not in columns:
-            connection.execute(
-                "ALTER TABLE subjects ADD COLUMN prioridade INTEGER NOT NULL DEFAULT 3"
+        if "subjects" in tables:
+            _add_missing_column(
+                connection, "subjects", "prioridade", "prioridade INTEGER NOT NULL DEFAULT 3"
             )
-        if "dificuldade" not in columns:
-            connection.execute(
-                "ALTER TABLE subjects ADD COLUMN dificuldade INTEGER NOT NULL DEFAULT 3"
+            _add_missing_column(
+                connection, "subjects", "dificuldade", "dificuldade INTEGER NOT NULL DEFAULT 3"
+            )
+            _add_missing_column(
+                connection, "subjects", "area", "area VARCHAR(20) NOT NULL DEFAULT 'outro'"
+            )
+        if "users" in tables:
+            _add_missing_column(
+                connection,
+                "users",
+                "weekly_goal_minutes",
+                "weekly_goal_minutes INTEGER NOT NULL DEFAULT 600",
+            )
+        if "tasks" in tables:
+            _add_missing_column(connection, "tasks", "completed_at", "completed_at DATETIME")
+            _add_missing_column(connection, "tasks", "next_review_date", "next_review_date DATE")
+        if "study_sessions" in tables:
+            _add_missing_column(
+                connection,
+                "study_sessions",
+                "completed",
+                "completed BOOLEAN NOT NULL DEFAULT 0",
+            )
+            _add_missing_column(
+                connection, "study_sessions", "completed_at", "completed_at DATETIME"
             )
         connection.commit()
 
