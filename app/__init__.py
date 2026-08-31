@@ -148,6 +148,39 @@ def migrate_legacy_database(app):
                 connection, "study_sessions", "session_type",
                 "session_type VARCHAR(20) NOT NULL DEFAULT 'teoria'",
             )
+            _add_missing_column(
+                connection, "study_sessions", "topic_id",
+                "topic_id INTEGER REFERENCES topics(id)",
+            )
+        if "knowledge_states" not in tables:
+            connection.execute("""
+                CREATE TABLE knowledge_states (
+                    id INTEGER PRIMARY KEY,
+                    user_id INTEGER NOT NULL REFERENCES users(id),
+                    subject_id INTEGER NOT NULL REFERENCES subjects(id),
+                    topic_id INTEGER NOT NULL REFERENCES topics(id),
+                    mastery_score REAL NOT NULL DEFAULT 0.0,
+                    confidence_score REAL NOT NULL DEFAULT 0.0,
+                    questions_answered INTEGER NOT NULL DEFAULT 0,
+                    questions_correct INTEGER NOT NULL DEFAULT 0,
+                    questions_wrong INTEGER NOT NULL DEFAULT 0,
+                    recent_accuracy REAL,
+                    historical_accuracy REAL,
+                    last_attempt_at DATETIME,
+                    last_review_at DATETIME,
+                    updated_at DATETIME NOT NULL,
+                    consecutive_correct INTEGER NOT NULL DEFAULT 0,
+                    consecutive_wrong INTEGER NOT NULL DEFAULT 0,
+                    average_response_time REAL,
+                    trend VARCHAR(20) NOT NULL DEFAULT 'stable'
+                )
+            """)
+            connection.execute("CREATE INDEX idx_ks_user_id ON knowledge_states(user_id)")
+            connection.execute("CREATE INDEX idx_ks_subject_id ON knowledge_states(subject_id)")
+            connection.execute("CREATE INDEX idx_ks_topic_id ON knowledge_states(topic_id)")
+            connection.execute("CREATE INDEX idx_ks_user_subject ON knowledge_states(user_id, subject_id)")
+            connection.execute("CREATE INDEX idx_ks_user_topic ON knowledge_states(user_id, topic_id)")
+            connection.execute("CREATE UNIQUE INDEX uq_knowledge_state_user_topic ON knowledge_states(user_id, topic_id)")
         connection.commit()
 
 
@@ -221,6 +254,7 @@ def create_app(config_name=None):
 
     with app.app_context():
         from app import models  # noqa: F401
+        from app.performance.models import KnowledgeState  # noqa: F401
         database_uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
         if database_uri.startswith("sqlite") and not database_uri.endswith(":memory:"):
             db_path = database_uri.replace("sqlite:///", "", 1)

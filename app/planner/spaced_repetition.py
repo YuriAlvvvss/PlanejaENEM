@@ -1,8 +1,9 @@
 """
-Revisão espaçada adaptativa - PlanejaENEM Adaptive Planner v2.
+Revisão espaçada adaptativa - PlanejaENEM 3.0.
 
-Calcula a próxima data de revisão com base no desempenho do aluno.
+Calcula a próxima data de revisão com base no desempenho real do aluno.
 Quanto melhor o desempenho, maior o intervalo entre revisões.
+Integra com KnowledgeState para decisões mais precisas.
 """
 
 from datetime import date, timedelta
@@ -12,6 +13,14 @@ from typing import Optional
 REVIEW_INTERVALS = {
     "excellent": 30,
     "good": 14,
+    "medium": 7,
+    "low": 3,
+    "very_low": 1,
+}
+
+REVIEW_INTERVALS_BY_MASTERY = {
+    "high": 30,
+    "medium_high": 14,
     "medium": 7,
     "low": 3,
     "very_low": 1,
@@ -171,3 +180,50 @@ def adaptive_interval_adjustment(
         adjusted = max(1, int(base_interval * 0.5))
 
     return max(1, adjusted)
+
+
+def classify_mastery_for_review(mastery_score: float) -> str:
+    """
+    Classifica o domínio para fins de revisão espaçada.
+
+    Baseado no mastery_score do KnowledgeState:
+    - >= 90: high (intervalo grande)
+    - 75-89: medium_high (intervalo médio)
+    - 60-74: medium (intervalo menor)
+    - 40-59: low (revisão próxima)
+    - < 40: very_low (revisão muito próxima)
+    """
+    if mastery_score >= 90:
+        return "high"
+    elif mastery_score >= 75:
+        return "medium_high"
+    elif mastery_score >= 60:
+        return "medium"
+    elif mastery_score >= 40:
+        return "low"
+    else:
+        return "very_low"
+
+
+def calculate_next_review_from_mastery(
+    mastery_score: float,
+    consecutive_correct: int = 0,
+    consecutive_wrong: int = 0,
+    today: Optional[date] = None,
+) -> Optional[date]:
+    """
+    Calcula a próxima data de revisão baseada no domínio real.
+
+    Usa o mastery_score do KnowledgeState ao invés de apenas accuracy.
+    Considera também padrões de acertos/erros consecutivos.
+    """
+    today = today or date.today()
+
+    mastery_level = classify_mastery_for_review(mastery_score)
+    base_interval = REVIEW_INTERVALS_BY_MASTERY.get(mastery_level, 7)
+
+    adjusted_interval = adaptive_interval_adjustment(
+        base_interval, consecutive_correct, consecutive_wrong
+    )
+
+    return today + timedelta(days=adjusted_interval)

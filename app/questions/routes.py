@@ -170,6 +170,14 @@ def answer_question(id):
             flash("Resposta correta!", "success")
         else:
             flash(f"Resposta incorreta. A resposta correta é {question.resposta_correta}.", "danger")
+
+        if question.topic_id:
+            try:
+                from app.performance.services import update_knowledge_state
+                update_knowledge_state(current_user.id, question.topic_id)
+            except Exception:
+                pass
+
         return redirect(url_for("questions.view_question", id=id))
 
     flash("Formulário inválido.", "warning")

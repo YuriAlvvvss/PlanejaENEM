@@ -214,6 +214,7 @@ class StudySession(db.Model):
     plan_id = db.Column(db.Integer, db.ForeignKey("study_plans.id"), nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False, index=True)
+    topic_id = db.Column(db.Integer, db.ForeignKey("topics.id"), nullable=True, index=True)
     session_date = db.Column(db.Date, nullable=False)
     start_time = db.Column(db.Time, nullable=False)
     end_time = db.Column(db.Time, nullable=False)
