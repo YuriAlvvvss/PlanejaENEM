@@ -25,6 +25,8 @@ class AIConfig:
     timeout: float = 30.0
     max_retries: int = 2
     max_tokens: int = 2048
+    max_questions_per_request: int = 5
+    max_questions_per_hour: int = 20
 
     def __repr__(self) -> str:
         """Repr seguro: nunca expõe api_key."""
@@ -78,4 +80,6 @@ def load_ai_config() -> AIConfig:
         timeout=_parse_float(os.environ.get("AI_TIMEOUT"), default=30.0),
         max_retries=_parse_int(os.environ.get("AI_MAX_RETRIES"), default=2),
         max_tokens=_parse_int(os.environ.get("AI_MAX_TOKENS"), default=2048),
+        max_questions_per_request=_parse_int(os.environ.get("AI_MAX_QUESTIONS_PER_REQUEST"), default=5),
+        max_questions_per_hour=_parse_int(os.environ.get("AI_MAX_QUESTIONS_PER_HOUR"), default=20),
     )
