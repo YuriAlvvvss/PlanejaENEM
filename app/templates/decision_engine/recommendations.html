@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}O que estudar agora? - PlanejaENEM 4.0{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">O que estudar agora?</h1>
+    
+    {% if summary %}
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Recomendações</h5>
+                    <p class="display-6">{{ summary.total_recommendations }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Tempo Total</h5>
+                    <p class="display-6">{{ summary.total_minutes }}min</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Fase</h5>
+                    <p class="display-6">{{ summary.study_phase }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Dias até ENEM</h5>
+                    <p class="display-6">{{ summary.days_until_exam }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if recommendations %}
+    <!-- Recomendação Principal -->
+    {% set primary = recommendations[0] %}
+    <div class="card mb-4 border-primary">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Recomendação Principal</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <h3>{{ primary.subject_name }} → {{ primary.topic_name }}</h3>
+                    <p class="text-muted">
+                        <strong>Score:</strong> {{ "%.1f"|format(primary.score) }} | 
+                        <strong>Domínio:</strong> {{ "%.0f"|format(primary.mastery_score) }}% | 
+                        <strong>Confiança:</strong> {{ "%.0f"|format(primary.confidence_score) }}%
+                    </p>
+                    <p><strong>Recomendação:</strong> {{ primary.duration_minutes }}min de 
+                       {% if primary.action.value == 'learn' %}teoria
+                       {% elif primary.action.value == 'practice' %}exercícios
+                       {% elif primary.action.value == 'enem_questions' %}questões ENEM
+                       {% elif primary.action.value == 'review' %}revisão
+                       {% elif primary.action.value == 'difficult_questions' %}questões difíceis
+                       {% else %}simulado{% endif %}
+                    </p>
+                    <div class="alert alert-info">
+                        <strong>Por quê?</strong>
+                        <ul class="mb-0 mt-2">
+                            {% for code in primary.reason_codes %}
+                            <li>{{ code.value }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="display-1 text-primary">{{ "%.0f"|format(primary.mastery_score) }}%</div>
+                    <div class="text-muted">Domínio</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recomendações Secundárias -->
+    {% if recommendations|length > 1 %}
+    <h3 class="mb-3">Próximas recomendações</h3>
+    <div class="row">
+        {% for rec in recommendations[1:4] %}
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ rec.subject_name }}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">{{ rec.topic_name }}</h6>
+                    <p class="card-text">
+                        <strong>{{ rec.duration_minutes }}min</strong> - 
+                        {% if rec.action.value == 'learn' %}Teoria
+                        {% elif rec.action.value == 'practice' %}Exercícios
+                        {% elif rec.action.value == 'enem_questions' %}Questões ENEM
+                        {% elif rec.action.value == 'review' %}Revisão
+                        {% elif rec.action.value == 'difficult_questions' %}Questões Difíceis
+                        {% else %}Simulado{% endif %}
+                    </p>
+                    <p class="card-text">
+                        <small class="text-muted">
+                            Score: {{ "%.1f"|format(rec.score) }} | 
+                            Domínio: {{ "%.0f"|format(rec.mastery_score) }}%
+                        </small>
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Mapa de Domínio -->
+    <h3 class="mb-3 mt-4">Mapa de Domínio</h3>
+    <div class="table-responsive">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Assunto</th>
+                    <th>Área</th>
+                    <th>Domínio</th>
+                    <th>Nível</th>
+                    <th>Tendência</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rec in recommendations %}
+                <tr>
+                    <td>{{ rec.subject_name }}</td>
+                    <td>{{ rec.area }}</td>
+                    <td>
+                        <div class="progress">
+                            <div class="progress-bar 
+                                {% if rec.mastery_score < 40 %}bg-danger
+                                {% elif rec.mastery_score < 60 %}bg-warning
+                                {% elif rec.mastery_score < 75 %}bg-info
+                                {% else %}bg-success{% endif %}" 
+                                style="width: {{ rec.mastery_score }}%">
+                                {{ "%.0f"|format(rec.mastery_score) }}%
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        {% if rec.mastery_score < 40 %}Crítico
+                        {% elif rec.mastery_score < 60 %}Baixo
+                        {% elif rec.mastery_score < 75 %}Médio
+                        {% elif rec.mastery_score < 90 %}Bom
+                        {% else %}Excelente{% endif %}
+                    </td>
+                    <td>-</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
+    <div class="alert alert-info">
+        <h4>Nenhuma recomendação disponível</h4>
+        <p>Crie um plano de estudo para receber recomendações personalizadas.</p>
+        <a href="{{ url_for('planner.index') }}" class="btn btn-primary">Criar Plano</a>
+    </div>
+    {% endif %}
+
+    {% if conflicts %}
+    <div class="card mt-4 border-warning">
+        <div class="card-header bg-warning">
+            <h5 class="mb-0">Conflitos Detectados</h5>
+        </div>
+        <div class="card-body">
+            {% for conflict in conflicts %}
+            <div class="alert alert-{{ 'danger' if conflict.severity.value == 'high' else 'warning' }}">
+                <strong>{{ conflict.conflict_type.value }}:</strong> {{ conflict.details }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="mt-4">
+        <a href="{{ url_for('decision_engine.debug') }}" class="btn btn-outline-secondary">
+            Modo Debug
+        </a>
+        <a href="{{ url_for('decision_engine.simulate') }}" class="btn btn-outline-secondary">
+            Simular Planos
+        </a>
+        <a href="{{ url_for('decision_engine.history') }}" class="btn btn-outline-secondary">
+            Histórico
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Simular Planos - PlanejaENEM 4.0{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Simular Planos de Estudo</h1>
+    
+    <div class="alert alert-info">
+        <strong>IMPORTANTE:</strong> Esta é uma estimativa de cobertura de prioridades.
+        O sistema NÃO prevê nota do ENEM. Use como guia de adequação ao perfil.
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Plano A</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('decision_engine.simulate') }}">
+                        <div class="mb-3">
+                            <label for="plan_a_daily" class="form-label">Minutos por dia</label>
+                            <input type="number" class="form-control" id="plan_a_daily" 
+                                   name="plan_a_daily" value="60" min="30" max="180">
+                        </div>
+                        <div class="mb-3">
+                            <label for="plan_a_weekly" class="form-label">Meta semanal (minutos)</label>
+                            <input type="number" class="form-control" id="plan_a_weekly" 
+                                   name="plan_a_weekly" value="420" min="120" max="2400">
+                        </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Plano B</h5>
+                </div>
+                <div class="card-body">
+                        <div class="mb-3">
+                            <label for="plan_b_daily" class="form-label">Minutos por dia</label>
+                            <input type="number" class="form-control" id="plan_b_daily" 
+                                   name="plan_b_daily" value="90" min="30" max="180">
+                        </div>
+                        <div class="mb-3">
+                            <label for="plan_b_weekly" class="form-label">Meta semanal (minutos)</label>
+                            <input type="number" class="form-control" id="plan_b_weekly" 
+                                   name="plan_b_weekly" value="630" min="120" max="2400">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            Comparar Planos
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <h4>Cenários Comuns</h4>
+        <div class="row">
+            <div class="col-md-4 mb-2">
+                <button type="button" class="btn btn-outline-info w-100" onclick="setScenario(30, 210, 60, 420)">
+                    Leve vs Moderado
+                </button>
+            </div>
+            <div class="col-md-4 mb-2">
+                <button type="button" class="btn btn-outline-info w-100" onclick="setScenario(60, 420, 120, 840)">
+                    Moderado vs Intensivo
+                </button>
+            </div>
+            <div class="col-md-4 mb-2">
+                <button type="button" class="btn btn-outline-info w-100" onclick="setScenario(45, 315, 90, 630)">
+                    Equilibrado vs Focado
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function setScenario(aDaily, aWeekly, bDaily, bWeekly) {
+    document.getElementById('plan_a_daily').value = aDaily;
+    document.getElementById('plan_a_weekly').value = aWeekly;
+    document.getElementById('plan_b_daily').value = bDaily;
+    document.getElementById('plan_b_weekly').value = bWeekly;
+}
+</script>
+{% endblock %}

@@ -173,6 +173,7 @@ class StudyPlan(db.Model):
     daily_minutes = db.Column(db.Integer, nullable=False, default=90)
     available_days = db.Column(db.String(200), nullable=False, default="seg,qua,sex")
     available_hours = db.Column(db.Text, nullable=False, default="08:00-10:00")
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
     generated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     last_regenerated_at = db.Column(db.DateTime, nullable=True)
 
@@ -209,6 +210,7 @@ class StudySession(db.Model):
     )
 
     SESSION_TYPES = ["teoria", "exercicios", "questoes_enem", "revisao", "simulado"]
+    SESSION_STATUSES = ["scheduled", "completed", "missed", "rescheduled", "cancelled"]
 
     id = db.Column(db.Integer, primary_key=True)
     plan_id = db.Column(db.Integer, db.ForeignKey("study_plans.id"), nullable=False, index=True)
@@ -223,8 +225,11 @@ class StudySession(db.Model):
     completed_at = db.Column(db.DateTime, nullable=True)
     priority_score = db.Column(db.Integer, nullable=False, default=0)
     session_type = db.Column(db.String(20), nullable=False, default="teoria")
+    status = db.Column(db.String(20), nullable=False, default="scheduled")
     manual_override = db.Column(db.Boolean, nullable=False, default=False)
     notes = db.Column(db.Text, nullable=True)
+    reason_codes = db.Column(db.Text, nullable=True)
+    explanation = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = db.Column(
         db.DateTime,

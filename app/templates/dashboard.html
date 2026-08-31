@@ -96,6 +96,101 @@
     </div>
     {% endif %}
 
+    <!-- O que estudar agora? -->
+    {% if current_recommendation %}
+    <div class="card mb-4 border-primary">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">O que estudar agora?</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <h3>{{ current_recommendation.subject_name }} → {{ current_recommendation.topic_name }}</h3>
+                    <p class="text-muted">
+                        <strong>Domínio:</strong> {{ "%.0f"|format(current_recommendation.mastery_score) }}% | 
+                        <strong>Confiança:</strong> {{ "%.0f"|format(current_recommendation.confidence_score) }}%
+                    </p>
+                    <p><strong>Recomendação:</strong> {{ current_recommendation.duration_minutes }}min de 
+                       {% if current_recommendation.action.value == 'learn' %}teoria
+                       {% elif current_recommendation.action.value == 'practice' %}exercícios
+                       {% elif current_recommendation.action.value == 'enem_questions' %}questões ENEM
+                       {% elif current_recommendation.action.value == 'review' %}revisão
+                       {% elif current_recommendation.action.value == 'difficult_questions' %}questões difíceis
+                       {% else %}simulado{% endif %}
+                    </p>
+                    <div class="alert alert-info mb-0">
+                        <strong>Por quê?</strong>
+                        <ul class="mb-0 mt-2">
+                            {% for code in current_recommendation.reason_codes %}
+                            <li>{{ code.value }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="display-1 text-primary">{{ "%.0f"|format(current_recommendation.mastery_score) }}%</div>
+                    <div class="text-muted">Domínio</div>
+                    <a href="{{ url_for('decision_engine.recommendations') }}" class="btn btn-primary mt-3">
+                        Ver todas recomendações
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Mapa de Domínio -->
+    {% if mastery_map %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Mapa de Domínio</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Matéria</th>
+                            <th>Tópico</th>
+                            <th>Área</th>
+                            <th>Domínio</th>
+                            <th>Nível</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in mastery_map[:10] %}
+                        <tr>
+                            <td>{{ item.subject_name }}</td>
+                            <td>{{ item.topic_name }}</td>
+                            <td>{{ item.area }}</td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar 
+                                        {% if item.mastery_score < 40 %}bg-danger
+                                        {% elif item.mastery_score < 60 %}bg-warning
+                                        {% elif item.mastery_score < 75 %}bg-info
+                                        {% else %}bg-success{% endif %}" 
+                                        style="width: {{ item.mastery_score }}%">
+                                        {{ "%.0f"|format(item.mastery_score) }}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if item.mastery_level == 'critical' %}<span class="text-danger">Crítico</span>
+                                {% elif item.mastery_level == 'low' %}<span class="text-warning">Baixo</span>
+                                {% elif item.mastery_level == 'medium' %}<span class="text-info">Médio</span>
+                                {% elif item.mastery_level == 'good' %}<span class="text-success">Bom</span>
+                                {% else %}<span class="text-success">Excelente</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="chart-grid">
         <section class="chart-card">
             <h3>Horas estudadas por semana</h3>

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Histórico de Recomendações - PlanejaENEM 4.0{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Histórico de Recomendações</h1>
+    
+    {% if history %}
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Matéria</th>
+                    <th>Duração</th>
+                    <th>Tipo</th>
+                    <th>Status</th>
+                    <th>Prioridade</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in history %}
+                <tr>
+                    <td>{{ item.session_date }}</td>
+                    <td>{{ item.subject_name }}</td>
+                    <td>{{ item.duration_minutes }}min</td>
+                    <td>
+                        {% if item.session_type == 'teoria' %}Teoria
+                        {% elif item.session_type == 'exercicios' %}Exercícios
+                        {% elif item.session_type == 'questoes_enem' %}Questões ENEM
+                        {% elif item.session_type == 'revisao' %}Revisão
+                        {% elif item.session_type == 'simulado' %}Simulado
+                        {% else %}{{ item.session_type }}{% endif %}
+                    </td>
+                    <td>
+                        <span class="badge 
+                            {% if item.status == 'completed' %}bg-success
+                            {% elif item.status == 'missed' %}bg-danger
+                            {% elif item.status == 'rescheduled' %}bg-warning
+                            {% else %}bg-secondary{% endif %}">
+                            {{ item.status }}
+                        </span>
+                    </td>
+                    <td>{{ item.priority_score }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if history|length >= 50 %}
+    <div class="text-center">
+        <p class="text-muted">Mostrando as 50 entradas mais recentes</p>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="alert alert-info">
+        <h4>Nenhum histórico disponível</h4>
+        <p>Complete sessões de estudo para ver seu histórico aqui.</p>
+        <a href="{{ url_for('planner.index') }}" class="btn btn-primary">Criar Plano</a>
+    </div>
+    {% endif %}
+
+    <!-- Estatísticas do Histórico -->
+    {% if history %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">Resumo do Histórico</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3 text-center">
+                    <h3>{{ history|length }}</h3>
+                    <p class="text-muted">Total de Sessões</p>
+                </div>
+                <div class="col-md-3 text-center">
+                    <h3>{{ history|selectattr('status', 'equalto', 'completed')|list|length }}</h3>
+                    <p class="text-muted">Concluídas</p>
+                </div>
+                <div class="col-md-3 text-center">
+                    <h3>{{ history|selectattr('status', 'equalto', 'missed')|list|length }}</h3>
+                    <p class="text-muted">Perdidas</p>
+                </div>
+                <div class="col-md-3 text-center">
+                    <h3>{{ history|map(attribute='duration_minutes')|sum }}min</h3>
+                    <p class="text-muted">Tempo Total</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="mt-4">
+        <a href="{{ url_for('decision_engine.recommendations') }}" class="btn btn-outline-primary">
+            Ver Recomendações
+        </a>
+        <a href="{{ url_for('decision_engine.debug') }}" class="btn btn-outline-secondary">
+            Modo Debug
+        </a>
+    </div>
+</div>
+{% endblock %}

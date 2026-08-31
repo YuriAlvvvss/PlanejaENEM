@@ -152,6 +152,23 @@ def migrate_legacy_database(app):
                 connection, "study_sessions", "topic_id",
                 "topic_id INTEGER REFERENCES topics(id)",
             )
+            _add_missing_column(
+                connection, "study_sessions", "status",
+                "status VARCHAR(20) NOT NULL DEFAULT 'scheduled'",
+            )
+            _add_missing_column(
+                connection, "study_sessions", "reason_codes",
+                "reason_codes TEXT",
+            )
+            _add_missing_column(
+                connection, "study_sessions", "explanation",
+                "explanation TEXT",
+            )
+        if "study_plans" in tables:
+            _add_missing_column(
+                connection, "study_plans", "is_active",
+                "is_active BOOLEAN NOT NULL DEFAULT 1",
+            )
         if "knowledge_states" not in tables:
             connection.execute("""
                 CREATE TABLE knowledge_states (
@@ -237,6 +254,7 @@ def create_app(config_name=None):
         return response
 
     from app.auth import auth_bp
+    from app.decision_engine import decision_engine_bp
     from app.main import main_bp
     from app.planner import planner_bp
     from app.questions import questions_bp
@@ -251,6 +269,7 @@ def create_app(config_name=None):
     app.register_blueprint(planner_bp)
     app.register_blueprint(questions_bp, url_prefix="/questions")
     app.register_blueprint(performance_bp, url_prefix="/performance")
+    app.register_blueprint(decision_engine_bp)
 
     with app.app_context():
         from app import models  # noqa: F401

@@ -44,6 +44,11 @@ def toggle_session(id):
     study_session = get_user_session(id)
     study_session.completed = not study_session.completed
     study_session.completed_at = datetime.now(UTC) if study_session.completed else None
+    
+    if study_session.completed:
+        study_session.status = "completed"
+    else:
+        study_session.status = "scheduled"
 
     if study_session.completed:
         from app.planner.spaced_repetition import calculate_next_review_date
@@ -67,6 +72,16 @@ def toggle_session(id):
             )
             if next_review:
                 task.next_review_date = next_review
+
+        try:
+            from app.performance.services import update_knowledge_state
+            update_knowledge_state(
+                user_id=current_user.id,
+                subject_id=study_session.subject_id,
+                topic_id=study_session.topic_id,
+            )
+        except Exception:
+            pass
 
     db.session.commit()
     status = "concluída" if study_session.completed else "reaberta"

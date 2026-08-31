@@ -80,10 +80,16 @@ def planner():
             daily_minutes=daily_minutes,
             available_days=",".join(days_valid),
             available_hours=available_hours,
+            is_active=True,
             generated_at=datetime.now().replace(tzinfo=None),
         )
         db.session.add(plan)
         db.session.flush()
+
+        StudyPlan.query.filter(
+            StudyPlan.user_id == current_user.id,
+            StudyPlan.id != plan.id,
+        ).update({"is_active": False})
 
         for session_data in result["sessions"]:
             start_time = session_data.get("start_time")
@@ -140,12 +146,12 @@ def planner():
 @login_required
 def regenerate(id):
     plan = get_user_plan(id)
-    if plan.sessions:
-        for session in plan.sessions:
-            db.session.delete(session)
-    db.session.delete(plan)
+    
+    plan.is_active = False
+    plan.last_regenerated_at = datetime.now().replace(tzinfo=None)
+    
     db.session.commit()
-    flash("Cronograma regenerado. Ajuste os dados e gere um novo planejamento.", "info")
+    flash("Plano anterior arquivado. Gere um novo planejamento.", "info")
     return redirect(url_for("planner.planner"))
 
 

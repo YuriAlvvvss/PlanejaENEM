@@ -2,6 +2,7 @@ from datetime import date, datetime, timedelta, timezone
 
 from app.areas import AREA_LABELS, area_label, infer_area
 from app.models import StudyPlan, StudySession, Subject, Task, QuestionAttempt, Question
+from app.performance.models import KnowledgeState
 
 REVIEW_INTERVAL_DAYS = 7
 WEEK_COUNT = 8
@@ -238,6 +239,43 @@ def build_dashboard_stats(user, today=None):
         },
     }
 
+    mastery_map = []
+    knowledge_states = KnowledgeState.query.filter_by(user_id=user.id).all()
+    for ks in knowledge_states:
+        subject = Subject.query.get(ks.subject_id)
+        topic = None
+        if ks.topic_id:
+            from app.models import Topic
+            topic = Topic.query.get(ks.topic_id)
+        
+        mastery_level = "critical"
+        if ks.mastery_score >= 90:
+            mastery_level = "excellent"
+        elif ks.mastery_score >= 75:
+            mastery_level = "good"
+        elif ks.mastery_score >= 60:
+            mastery_level = "medium"
+        elif ks.mastery_score >= 40:
+            mastery_level = "low"
+        
+        mastery_map.append({
+            "subject_name": subject.nome if subject else "Desconhecido",
+            "topic_name": topic.nome if topic else "Geral",
+            "area": area_label(resolved_area(subject)) if subject else "Outro",
+            "mastery_score": ks.mastery_score,
+            "mastery_level": mastery_level,
+            "confidence_score": ks.confidence_score,
+            "trend": ks.trend,
+        })
+
+    current_recommendation = None
+    if plan and plan.is_active:
+        try:
+            from app.decision_engine.engine import get_current_recommendations
+            current_recommendation = get_current_recommendations(user.id, today)
+        except Exception:
+            pass
+
     return {
         "today": today,
         "subjects": subjects,
@@ -265,6 +303,8 @@ def build_dashboard_stats(user, today=None):
         "total_attempts": total_attempts,
         "correct_attempts": correct_attempts,
         "question_accuracy": question_accuracy,
+        "mastery_map": mastery_map,
+        "current_recommendation": current_recommendation,
     }
 
 

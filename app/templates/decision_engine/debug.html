@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Modo Debug - PlanejaENEM 4.0{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Modo Debug - Explicabilidade</h1>
+    
+    <div class="alert alert-info">
+        <strong>Modo Debug:</strong> Visualize scores, pesos e reason codes detalhados.
+        Útil para testar e validar o algoritmo de recomendação.
+    </div>
+
+    {% if result %}
+    <!-- Resumo -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Resumo da Análise</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>Tópicos Analisados:</strong> {{ result.summary.topics_analyzed }}
+                </div>
+                <div class="col-md-3">
+                    <strong>Recomendações:</strong> {{ result.summary.total_recommendations }}
+                </div>
+                <div class="col-md-3">
+                    <strong>Tempo Total:</strong> {{ result.summary.total_minutes }}min
+                </div>
+                <div class="col-md-3">
+                    <strong>Fase:</strong> {{ result.summary.study_phase }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scores Detalhados -->
+    {% if result.debug %}
+    <h3 class="mb-3">Scores por Tópico</h3>
+    <div class="table-responsive">
+        <table class="table table-bordered table-sm">
+            <thead>
+                <tr>
+                    <th>Tópico</th>
+                    <th>Matéria</th>
+                    <th>Domínio</th>
+                    <th>Confiança</th>
+                    <th>Score Final</th>
+                    <th>Ação</th>
+                    <th>Motivos</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for topic_id, debug in result.debug.items() %}
+                <tr>
+                    <td>{{ debug.topic_name }}</td>
+                    <td>{{ debug.subject_name }}</td>
+                    <td>{{ "%.1f"|format(debug.mastery_score) }}%</td>
+                    <td>{{ "%.1f"|format(debug.confidence_score) }}%</td>
+                    <td><strong>{{ "%.2f"|format(debug.final_score) }}</strong></td>
+                    <td>{{ debug.recommended_action }}</td>
+                    <td>
+                        <small>{{ debug.reason_codes|join(', ') }}</small>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Componentes do Score -->
+    <h3 class="mb-3 mt-4">Componentes do Score</h3>
+    <div class="card">
+        <div class="card-body">
+            <pre style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto;">{% for topic_id, debug in result.debug.items() %}
+<b>{{ debug.subject_name }} → {{ debug.topic_name }}</b>
+  Score Final: {{ "%.2f"|format(debug.final_score) }}
+  
+  Componentes:
+{% for comp, value in debug.components.items() %}    {{ comp }}: {{ "%.2f"|format(value) }} (peso: {{ debug.weights.get(comp, 0) }})
+{% endfor %}
+  
+  Reason Codes: {{ debug.reason_codes|join(', ') }}
+  Ação Recomendada: {{ debug.recommended_action }}
+
+{% endfor %}</pre>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Saída de Debug Completa -->
+    <h3 class="mb-3 mt-4">Saída de Debug Completa</h3>
+    <div class="card">
+        <div class="card-body">
+            <pre style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; max-height: 500px; overflow-y: auto;">{{ debug_output }}</pre>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+        <p>Nenhum dado disponível. Crie um plano de estudo primeiro.</p>
+        <a href="{{ url_for('planner.index') }}" class="btn btn-primary">Criar Plano</a>
+    </div>
+    {% endif %}
+
+    <div class="mt-4">
+        <a href="{{ url_for('decision_engine.recommendations') }}" class="btn btn-outline-primary">
+            Ver Recomendações
+        </a>
+        <a href="{{ url_for('decision_engine.simulate') }}" class="btn btn-outline-secondary">
+            Simular Planos
+        </a>
+    </div>
+</div>
+{% endblock %}

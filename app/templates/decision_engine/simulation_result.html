@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Resultado da Simulação - PlanejaENEM 4.0{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Resultado da Simulação</h1>
+    
+    <div class="alert alert-info">
+        <strong>IMPORTANTE:</strong> Esta é uma estimativa de cobertura de prioridades.
+        O sistema NÃO prevê nota do ENEM. Use como guia de adequação ao perfil.
+    </div>
+
+    <!-- Comparação -->
+    {% if comparison %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Análise Comparativa</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h4>{{ comparison.plan_a.name }}</h4>
+                    <ul class="list-unstyled">
+                        <li><strong>Tempo:</strong> {{ comparison.plan_a.total_minutes }}min ({{ "%.1f"|format(comparison.plan_a.total_minutes / 60) }}h)</li>
+                        <li><strong>Sessões:</strong> {{ comparison.plan_a.total_sessions }}</li>
+                        <li><strong>Cobertura:</strong> {{ "%.1f"|format(comparison.plan_a.coverage_score) }}%</li>
+                        <li><strong>Prioridades Altas:</strong> {{ "%.1f"|format(comparison.plan_a.high_priority_coverage) }}%</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h4>{{ comparison.plan_b.name }}</h4>
+                    <ul class="list-unstyled">
+                        <li><strong>Tempo:</strong> {{ comparison.plan_b.total_minutes }}min ({{ "%.1f"|format(comparison.plan_b.total_minutes / 60) }}h)</li>
+                        <li><strong>Sessões:</strong> {{ comparison.plan_b.total_sessions }}</li>
+                        <li><strong>Cobertura:</strong> {{ "%.1f"|format(comparison.plan_b.coverage_score) }}%</li>
+                        <li><strong>Prioridades Altas:</strong> {{ "%.1f"|format(comparison.plan_b.high_priority_coverage) }}%</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <div class="text-center">
+                <h5>{{ comparison.analysis.recommendation }}</h5>
+                <p class="text-muted">{{ comparison.analysis.reasoning }}</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Relatório Completo -->
+    {% if report %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Relatório Completo</h5>
+        </div>
+        <div class="card-body">
+            <pre style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; white-space: pre-wrap;">{{ report }}</pre>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Detalhes dos Planos -->
+    <div class="row">
+        {% if simulation_a %}
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">{{ simulation_a.plan_name }}</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Cobertura por Prioridade</h6>
+                    {% for priority, data in simulation_a.priority_coverage.items() %}
+                    <div class="mb-2">
+                        <small class="text-muted">{{ priority }}</small>
+                        <div class="progress">
+                            <div class="progress-bar bg-info" style="width: {{ data.percentage }}%">
+                                {{ data.covered }}/{{ data.total }} ({{ "%.1f"|format(data.percentage) }}%)
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if simulation_b %}
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">{{ simulation_b.plan_name }}</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Cobertura por Prioridade</h6>
+                    {% for priority, data in simulation_b.priority_coverage.items() %}
+                    <div class="mb-2">
+                        <small class="text-muted">{{ priority }}</small>
+                        <div class="progress">
+                            <div class="progress-bar bg-success" style="width: {{ data.percentage }}%">
+                                {{ data.covered }}/{{ data.total }} ({{ "%.1f"|format(data.percentage) }}%)
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="mt-4">
+        <a href="{{ url_for('decision_engine.simulate') }}" class="btn btn-outline-primary">
+            Nova Simulação
+        </a>
+        <a href="{{ url_for('decision_engine.recommendations') }}" class="btn btn-outline-secondary">
+            Ver Recomendações
+        </a>
+    </div>
+</div>
+{% endblock %}
