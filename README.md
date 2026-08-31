@@ -1,6 +1,6 @@
 # PlanejaENEM 📚
 
-**PlanejaENEM** é uma aplicação web para organização de estudos direcionada aos candidatos do ENEM. A plataforma permite registrar matérias (organizadas por área do ENEM), gerenciar tarefas com repetição espaçada, acompanhar o progresso em tempo real por meio de métricas e gráficos, e gerar um cronograma personalizado de estudos com base na disponibilidade semanal, tempo diário e data da prova.
+**PlanejaENEM** é uma aplicação web para organização de estudos direcionada aos candidatos do ENEM. A plataforma permite registrar matérias (organizadas por área do ENEM), gerenciar tarefas com repetição espaçada, **cadastrar e responder questões com registro de tentativas**, acompanhar o progresso em tempo real por meio de métricas e gráficos, e gerar um cronograma personalizado de estudos com base na disponibilidade semanal, tempo diário e data da prova.
 
 ## 🎯 Visão Geral
 
@@ -28,6 +28,12 @@ A aplicação foi desenvolvida com **Flask** seguindo a arquitetura de **Applica
 - ✅ **Segurança**: Cabeçalhos de segurança (CSP, HSTS em produção), proteção CSRF, cookies seguros, session protection "strong", rate limiting e proteção IDOR
 - ✅ **LGPD**: Centro de privacidade, exportação de dados e exclusão de conta
 - ✅ **Interface Premium**: Animações, glassmorphism e tema moderno (veja [PREMIUM_UPGRADES.md](PREMIUM_UPGRADES.md))
+- ✅ **Sistema de Questões**: CRUD completo de questões com enunciado, alternativas (A-E), resposta correta, dificuldade, ano e fonte
+- ✅ **Assuntos (Topics)**: Organização de questões por assunto dentro de cada matéria
+- ✅ **Registro de Tentativas**: Responder questões com registro de acerto/erro e tempo opcional
+- ✅ **Estatísticas de Desempenho**: Aproveitamento por matéria, assunto, dificuldade e área do ENEM
+- ✅ **Dashboard de Desempenho**: Página dedicada com gráficos Chart.js, melhor/pior matéria e histórico
+- ✅ **Preparação para Mastery**: Modelagem pronta para futura implementação de domínio/mastery
 
 ## 🛠 Stack Tecnológico
 
@@ -55,7 +61,7 @@ PlanejaENEM/
 │   ├── extensions.py             # Extensões (db, login_manager, csrf, limiter)
 │   ├── authz.py                  # Autorização centralizada (get_user_subject, user_owns_*, etc.)
 │   ├── areas.py                  # Áreas do ENEM e inferência automática de área
-│   ├── models.py                 # Modelos (User, Subject, Task, StudyPlan, StudySession, PasswordResetToken)
+│   ├── models.py                 # Modelos (User, Subject, Task, StudyPlan, StudySession, PasswordResetToken, Topic, Question, QuestionAttempt)
 │   ├── auth/                     # Blueprint de autenticação
 │   │   ├── forms.py              # RegistrationForm, LoginForm, ProfileForm, ChangePasswordForm, ForgotPasswordForm, ResetPasswordForm
 │   │   └── routes.py             # /register, /login, /logout, /profile, /forgot-password, /reset-password, /privacy, /export-data, /delete-account
@@ -76,6 +82,15 @@ PlanejaENEM/
 │   ├── tasks/                    # Blueprint de tarefas
 │   │   ├── forms.py             # TaskForm
 │   │   └── routes.py            # CRUD de tarefas, filtros e toggle de status
+│   ├── questions/                # Blueprint de questões
+│   │   ├── __init__.py          # Blueprint registration
+│   │   ├── forms.py             # TopicForm, QuestionForm, AnswerForm
+│   │   ├── routes.py            # CRUD de assuntos e questões, resposta de questões
+│   │   └── services.py          # Lógica de negócio para questões e tentativas
+│   ├── performance/             # Blueprint de desempenho
+│   │   ├── __init__.py          # Blueprint registration
+│   │   ├── routes.py            # Dashboard de desempenho
+│   │   └── statistics.py        # Cálculo de estatísticas por matéria/assunto/dificuldade/área
 │   ├── static/                   # Arquivos estáticos
 │   │   ├── app.js                # JavaScript da aplicação
 │   │   ├── dashboard-charts.js   # Gráficos do dashboard (Chart.js)
@@ -105,6 +120,16 @@ PlanejaENEM/
 │           ├── list.html
 │           ├── form.html
 │           └── confirm_delete.html
+│       ├── questions/             # Templates de questões
+│       │   ├── topics.html       # Lista de assuntos
+│       │   ├── topic_form.html   # Formulário de assunto
+│       │   ├── confirm_delete_topic.html
+│       │   ├── list.html         # Lista de questões
+│       │   ├── question_form.html # Formulário de questão
+│       │   ├── view.html         # Visualizar e responder questão
+│       │   └── confirm_delete_question.html
+│       └── performance/          # Templates de desempenho
+│           └── overview.html     # Dashboard de desempenho com gráficos
 ├── instance/                      # Runtime (ignorado no git)
 │   ├── logs/                     # Logs da aplicação
 │   └── planejaenem.db            # Banco SQLite (criado automaticamente)
@@ -118,7 +143,8 @@ PlanejaENEM/
 │   ├── test_scheduler.py         # Testes do scheduler
 │   ├── test_validators.py        # Testes de validadores
 │   ├── test_adaptive_planner.py  # Testes de integração do planner adaptativo
-│   └── test_phase2_quality.py    # Testes de qualidade
+│   ├── test_phase2_quality.py    # Testes de qualidade
+│   └── test_questions.py         # Testes do módulo de questões
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
@@ -228,6 +254,7 @@ python -m pytest tests/test_scheduler.py -v
 python -m pytest tests/test_validators.py -v
 python -m pytest tests/test_adaptive_planner.py -v
 python -m pytest tests/test_phase2_quality.py -v
+python -m pytest tests/test_questions.py -v
 ```
 
 ## 🔗 Rotas Principais
@@ -270,14 +297,33 @@ python -m pytest tests/test_phase2_quality.py -v
 - `POST     /planner/replan` - Replanejar sessões perdidas
 - `GET      /planner/diagnostics` - Diagnóstico de desempenho por área
 
+### Questões (`/questions`)
+- `GET      /questions` - Listar questões (filtros: `?subject=<id>`, `?topic=<id>`)
+- `GET/POST /questions/new` - Criar questão
+- `GET      /questions/<id>` - Visualizar questão
+- `GET/POST /questions/<id>/edit` - Editar questão
+- `GET/POST /questions/<id>/delete` - Excluir questão (remove tentativas associadas)
+- `POST     /questions/<id>/answer` - Responder questão (registra tentativa)
+- `GET      /questions/topics` - Listar assuntos
+- `GET/POST /questions/topics/new` - Criar assunto
+- `GET/POST /questions/topics/<id>/edit` - Editar assunto
+- `GET/POST /questions/topics/<id>/delete` - Excluir assunto
+
+### Desempenho (`/performance`)
+- `GET      /performance` - Dashboard de desempenho (estatísticas por matéria, assunto, dificuldade, área)
+
 ## 📖 Fluxo de Uso
 
 1. **Registrar/Login** em `http://localhost:5000`.
 2. **Configurar Matérias** em `/subjects`: nome, cor, prioridade, dificuldade e área do ENEM.
-3. **Gerenciar Tarefas** em `/tasks`: vincule a uma matéria, defina data prevista e prioridade; marque como concluídas (gera data de revisão).
-4. **Definir Meta Semanal** no dashboard (campo "Meta semanal").
-5. **Gerar Cronograma** em `/planner`: informe dias disponíveis, faixas horárias, tempo diário e data da prova; ajuste manualmente se necessário e regenere quando quiser.
-6. **Acompanhar Progresso** no dashboard: taxa de conclusão, streak, cobertura por área, sessões do dia, revisões pendentes e gráficos de horas estudadas.
+3. **Criar Assuntos** em `/questions/topics`: organize questões por tema dentro de cada matéria.
+4. **Cadastrar Questões** em `/questions`: enunciado, alternativas, resposta correta, dificuldade e assunto.
+5. **Responder Questões** em `/questions/<id>`: selecione a alternativa e registre o tempo opcional.
+6. **Gerenciar Tarefas** em `/tasks`: vincule a uma matéria, defina data prevista e prioridade; marque como concluídas (gera data de revisão).
+7. **Definir Meta Semanal** no dashboard (campo "Meta semanal").
+8. **Gerar Cronograma** em `/planner`: informe dias disponíveis, faixas horárias, tempo diário e data da prova; ajuste manualmente se necessário e regenere quando quiser.
+9. **Acompanhar Desempenho** em `/performance`: aproveitamento por matéria, assunto, dificuldade e área do ENEM.
+10. **Acompanhar Progresso** no dashboard: taxa de conclusão, streak, cobertura por área, sessões do dia, revisões pendentes e gráficos de horas estudadas.
 
 ## 📊 Modelos de Dados
 
@@ -350,7 +396,46 @@ Propriedades úteis: `progress_percent`, `priority_score`, `area_label`, `total_
 - created_at / updated_at
 ```
 
-## 🧠 Adaptive Planner v2
+### Topic (Assunto)
+```python
+- id
+- nome                    # nome do assunto
+- subject_id              # FK -> Subject
+- user_id                 # FK -> User (isolamento multiusuário)
+- created_at
+```
+
+### Question (Questão)
+```python
+- id
+- enunciado               # texto da questão (Text)
+- alternativa_a           # alternativa A (String 500)
+- alternativa_b           # alternativa B
+- alternativa_c           # alternativa C
+- alternativa_d           # alternativa D
+- alternativa_e           # alternativa E
+- resposta_correta        # "A" | "B" | "C" | "D" | "E"
+- subject_id              # FK -> Subject
+- topic_id                # FK -> Topic (opcional)
+- user_id                 # FK -> User (isolamento multiusuário)
+- dificuldade             # 1-5
+- ano                     # ano da questão (opcional, 2000-2030)
+- fonte                   # fonte da questão (opcional, ex: "ENEM 2023")
+- created_at
+```
+
+### QuestionAttempt (Tentativa)
+```python
+- id
+- user_id                 # FK -> User
+- question_id             # FK -> Question
+- resposta                # "A" | "B" | "C" | "D" | "E"
+- correta                 # Boolean (calculada automaticamente)
+- tempo_segundos          # tempo gasto em segundos (opcional)
+- attempted_at            # DateTime da tentativa
+```
+
+## 🧠 Adaptive Planner
 
 O PlanejaENEM possui um sistema de planejamento adaptativo determinístico (sem dependência de LLM) que gera cronogramas inteligentes baseados em múltiplos fatores.
 
@@ -505,17 +590,20 @@ Por que Matemática recebeu mais tempo?
 - ✅ CRUD de matérias (com áreas do ENEM) e tarefas
 - ✅ Repetição espaçada adaptativa (1-30 dias baseado em desempenho)
 - ✅ Dashboard com métricas, streak e gráficos (Chart.js)
-- ✅ **Adaptive Planner v2**: Score inteligente, balanceamento, tipos de estudo
+- ✅ **Adaptive Planner**: Score inteligente, balanceamento, tipos de estudo
 - ✅ **Replanejamento**: Detecção e reagendamento de sessões perdidas
 - ✅ **Diagnóstico**: Análise de desempenho por área do ENEM
 - ✅ **Explicabilidade**: Algoritmo pode justificar prioridades
-- ✅ Suite de testes automatizados (252 testes)
+- ✅ Suite de testes automatizados (295 testes)
 - ✅ Interface premium (animações, glassmorphism)
 - ✅ Pronto para produção com Docker (exige `SECRET_KEY`)
 - ✅ **LGPD**: exportação de dados e exclusão de conta
 - ✅ **Rate limiting** distribuído (Flask-Limiter)
 - ✅ **Password reset** com tokens seguros
 - ✅ **Segurança**: nota 8.5/10 (auditoria completa)
+- ✅ **Sistema de Questões**: CRUD de questões, assuntos, tentativas e estatísticas
+- ✅ **Dashboard de Desempenho**: Gráficos por matéria, assunto, dificuldade e área
+- ✅ **Proteção IDOR estendida**: Questões e tentativas protegidas contra acesso cross-user
 
 ## 📚 Documentação Adicional
 
@@ -548,4 +636,4 @@ Ferramenta de preparação para o ENEM.
 
 ---
 
-**Última atualização**: Agosto 2026 - Segurança e LGPD implementadas
+**Última atualização**: Agosto 2026 - Sistema de questões, tentativas e desempenho
