@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+{% block title %}Desempenho - PlanejaENEM{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="eyebrow">Avaliação</div>
+        <h2>Seu desempenho</h2>
+    </div>
+    <div>
+        <a href="{{ url_for('questions.list_questions') }}" class="btn btn-outline-primary btn-sm">Questões</a>
+        <a href="{{ url_for('performance.overview') }}" class="btn btn-primary btn-sm">Atualizar</a>
+    </div>
+</div>
+
+<div class="insight-grid insight-grid--metrics">
+    <div class="insight-card insight-card--primary">
+        <span class="insight-label">Aproveitamento geral</span>
+        <strong>{{ overall.accuracy }}%</strong>
+        <small>{{ overall.correct }} acertos de {{ overall.total }} questões</small>
+    </div>
+    <div class="insight-card">
+        <span class="insight-label">Questões respondidas</span>
+        <strong>{{ overall.total }}</strong>
+        <small>total de tentativas</small>
+    </div>
+    <div class="insight-card">
+        <span class="insight-label">Acertos</span>
+        <strong class="text-success">{{ overall.correct }}</strong>
+        <small>respostas corretas</small>
+    </div>
+    <div class="insight-card">
+        <span class="insight-label">Erros</span>
+        <strong class="text-danger">{{ overall.wrong }}</strong>
+        <small>respostas incorretas</small>
+    </div>
+</div>
+
+{% if best_subject and worst_subject %}
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card border-success">
+            <div class="card-body">
+                <h6 class="text-success mb-1"><i class="bi bi-trophy"></i> Melhor matéria</h6>
+                <h4 class="mb-0">{{ best_subject.subject_nome }}</h4>
+                <span class="badge bg-success mt-1">{{ best_subject.accuracy }}% · {{ best_subject.total }} questões</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-warning">
+            <div class="card-body">
+                <h6 class="text-warning mb-1"><i class="bi bi-arrow-up-circle"></i> Precisa de atenção</h6>
+                <h4 class="mb-0">{{ worst_subject.subject_nome }}</h4>
+                <span class="badge bg-warning text-dark mt-1">{{ worst_subject.accuracy }}% · {{ worst_subject.total }} questões</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if subject_stats %}
+<div class="chart-grid">
+    <section class="chart-card">
+        <h3>Desempenho por matéria</h3>
+        <p>Aproveitamento em cada disciplina.</p>
+        <div class="chart-frame"><canvas id="chartSubjectPerformance" aria-label="Gráfico de desempenho por matéria"></canvas></div>
+    </section>
+    {% if area_stats %}
+    <section class="chart-card">
+        <h3>Desempenho por área do ENEM</h3>
+        <p>Aproveitamento agregado por área de conhecimento.</p>
+        <div class="chart-frame"><canvas id="chartAreaPerformance" aria-label="Gráfico de desempenho por área"></canvas></div>
+    </section>
+    {% endif %}
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Detalhamento por matéria</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Matéria</th>
+                    <th>Questões</th>
+                    <th>Acertos</th>
+                    <th>Erros</th>
+                    <th>Aproveitamento</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in subject_stats %}
+                <tr>
+                    <td>
+                        <span class="status-pill" style="background-color: {{ stat.subject_cor }}22; color: {{ stat.subject_cor }};">
+                            {{ stat.subject_nome }}
+                        </span>
+                    </td>
+                    <td>{{ stat.total }}</td>
+                    <td class="text-success">{{ stat.correct }}</td>
+                    <td class="text-danger">{{ stat.wrong }}</td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="progress flex-grow-1" style="height: 8px; max-width: 120px;">
+                                <div class="progress-bar {% if stat.accuracy >= 70 %}bg-success{% elif stat.accuracy >= 40 %}bg-warning{% else %}bg-danger{% endif %}" style="width: {{ stat.accuracy }}%;"></div>
+                            </div>
+                            <strong>{{ stat.accuracy }}%</strong>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if difficulty_stats %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Desempenho por dificuldade</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Dificuldade</th>
+                    <th>Questões</th>
+                    <th>Acertos</th>
+                    <th>Erros</th>
+                    <th>Aproveitamento</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in difficulty_stats %}
+                <tr>
+                    <td><span class="badge bg-secondary">{{ stat.dificuldade }}/5</span></td>
+                    <td>{{ stat.total }}</td>
+                    <td class="text-success">{{ stat.correct }}</td>
+                    <td class="text-danger">{{ stat.wrong }}</td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="progress flex-grow-1" style="height: 8px; max-width: 120px;">
+                                <div class="progress-bar {% if stat.accuracy >= 70 %}bg-success{% elif stat.accuracy >= 40 %}bg-warning{% else %}bg-danger{% endif %}" style="width: {{ stat.accuracy }}%;"></div>
+                            </div>
+                            <strong>{{ stat.accuracy }}%</strong>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if topic_stats %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Desempenho por assunto</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Assunto</th>
+                    <th>Matéria</th>
+                    <th>Questões</th>
+                    <th>Acertos</th>
+                    <th>Aproveitamento</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in topic_stats %}
+                <tr>
+                    <td class="fw-semibold">{{ stat.topic_nome }}</td>
+                    <td>{{ stat.subject_nome }}</td>
+                    <td>{{ stat.total }}</td>
+                    <td class="text-success">{{ stat.correct }}</td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="progress flex-grow-1" style="height: 8px; max-width: 120px;">
+                                <div class="progress-bar {% if stat.accuracy >= 70 %}bg-success{% elif stat.accuracy >= 40 %}bg-warning{% else %}bg-danger{% endif %}" style="width: {{ stat.accuracy }}%;"></div>
+                            </div>
+                            <strong>{{ stat.accuracy }}%</strong>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if recent.attempts %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Últimos resultados</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Matéria</th>
+                    <th>Dificuldade</th>
+                    <th>Resultado</th>
+                    <th>Tempo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for att in recent.attempts %}
+                <tr>
+                    <td>{{ att.attempted_at.strftime('%d/%m %H:%M') }}</td>
+                    <td>{{ att.subject_nome }}</td>
+                    <td><span class="badge bg-secondary">{{ att.dificuldade }}/5</span></td>
+                    <td>
+                        {% if att.correta %}
+                        <span class="badge bg-success">Acertou ({{ att.resposta }})</span>
+                        {% else %}
+                        <span class="badge bg-danger">Errou ({{ att.resposta }} → {{ att.correct_answer }})</span>
+                        {% endif %}
+                    </td>
+                    <td>{% if att.tempo_segundos is not none %}{{ att.tempo_segundos }}s{% else %}-{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if not overall.total %}
+<div class="workspace-empty">
+    <h5>Nenhum dado de desempenho ainda</h5>
+    <p>Responda questões para começar a acompanhar seu aproveitamento.</p>
+    <a href="{{ url_for('questions.list_questions') }}" class="btn btn-primary">Ver questões</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if subject_stats %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var subjectData = {{ subject_stats | tojson }};
+    if (subjectData.length > 0) {
+        var ctx = document.getElementById('chartSubjectPerformance');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: subjectData.map(function(s) { return s.subject_nome; }),
+                    datasets: [{
+                        label: 'Aproveitamento %',
+                        data: subjectData.map(function(s) { return s.accuracy; }),
+                        backgroundColor: subjectData.map(function(s) { return s.subject_cor; }),
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, max: 100, ticks: { callback: function(v) { return v + '%'; } } } }
+                }
+            });
+        }
+    }
+
+    var areaData = {{ area_stats | tojson }};
+    if (areaData && areaData.length > 0) {
+        var ctxArea = document.getElementById('chartAreaPerformance');
+        if (ctxArea) {
+            new Chart(ctxArea, {
+                type: 'doughnut',
+                data: {
+                    labels: areaData.map(function(a) { return a.area_label; }),
+                    datasets: [{
+                        data: areaData.map(function(a) { return a.accuracy; }),
+                        backgroundColor: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'right' } }
+                }
+            });
+        }
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

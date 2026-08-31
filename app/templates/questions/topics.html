@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Assuntos - PlanejaENEM{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="eyebrow">Organização</div>
+        <h2>Assuntos</h2>
+    </div>
+    <a href="{{ url_for('questions.create_topic_view') }}" class="btn btn-primary">+ Novo Assunto</a>
+</div>
+
+{% if topics %}
+<div class="table-responsive table-modern">
+    <table class="table table-hover mb-0">
+        <thead>
+            <tr>
+                <th>Assunto</th>
+                <th>Matéria</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for topic in topics %}
+            <tr>
+                <td class="fw-semibold">{{ topic.nome }}</td>
+                <td>
+                    <span class="status-pill" style="background-color: {{ topic.subject.cor }}22; color: {{ topic.subject.cor }};">
+                        {{ topic.subject.nome }}
+                    </span>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <a href="{{ url_for('questions.edit_topic', id=topic.id) }}" class="btn btn-outline-primary">Editar</a>
+                        <a href="{{ url_for('questions.delete_topic', id=topic.id) }}" class="btn btn-outline-danger">Excluir</a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="workspace-empty">
+    <h5>Nenhum assunto cadastrado</h5>
+    <p>Crie assuntos para organizar suas questões por tema dentro de cada matéria.</p>
+    <a href="{{ url_for('questions.create_topic_view') }}" class="btn btn-primary">Criar primeiro assunto</a>
+</div>
+{% endif %}
+{% endblock %}

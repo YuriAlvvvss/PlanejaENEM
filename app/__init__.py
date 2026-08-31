@@ -206,6 +206,8 @@ def create_app(config_name=None):
     from app.auth import auth_bp
     from app.main import main_bp
     from app.planner import planner_bp
+    from app.questions import questions_bp
+    from app.performance import performance_bp
     from app.subjects import subjects_bp
     from app.tasks import tasks_bp
 
@@ -214,6 +216,8 @@ def create_app(config_name=None):
     app.register_blueprint(subjects_bp, url_prefix="/subjects")
     app.register_blueprint(tasks_bp, url_prefix="/tasks")
     app.register_blueprint(planner_bp)
+    app.register_blueprint(questions_bp, url_prefix="/questions")
+    app.register_blueprint(performance_bp, url_prefix="/performance")
 
     with app.app_context():
         from app import models  # noqa: F401

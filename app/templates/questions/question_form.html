@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - PlanejaENEM{% endblock %}
+
+{% block content %}
+<div class="auth-shell">
+    <div class="auth-card card" style="max-width: 800px;">
+        <div class="card-body">
+            <div class="text-center mb-4">
+                <div class="eyebrow">Questão</div>
+                <h3>{{ title }}</h3>
+            </div>
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="mb-3">
+                    <label class="form-label">{{ form.enunciado.label }}</label>
+                    {{ form.enunciado(class="form-control" + (" is-invalid" if form.enunciado.errors else ""), rows="4", placeholder="Escreva o enunciado da questão...") }}
+                    {% if form.enunciado.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.enunciado.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">{{ form.alternativa_a.label }}</label>
+                        {{ form.alternativa_a(class="form-control" + (" is-invalid" if form.alternativa_a.errors else ""), placeholder="Alternativa A") }}
+                        {% if form.alternativa_a.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.alternativa_a.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">{{ form.alternativa_b.label }}</label>
+                        {{ form.alternativa_b(class="form-control" + (" is-invalid" if form.alternativa_b.errors else ""), placeholder="Alternativa B") }}
+                        {% if form.alternativa_b.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.alternativa_b.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">{{ form.alternativa_c.label }}</label>
+                        {{ form.alternativa_c(class="form-control" + (" is-invalid" if form.alternativa_c.errors else ""), placeholder="Alternativa C") }}
+                        {% if form.alternativa_c.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.alternativa_c.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">{{ form.alternativa_d.label }}</label>
+                        {{ form.alternativa_d(class="form-control" + (" is-invalid" if form.alternativa_d.errors else ""), placeholder="Alternativa D") }}
+                        {% if form.alternativa_d.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.alternativa_d.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">{{ form.alternativa_e.label }}</label>
+                        {{ form.alternativa_e(class="form-control" + (" is-invalid" if form.alternativa_e.errors else ""), placeholder="Alternativa E") }}
+                        {% if form.alternativa_e.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.alternativa_e.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">{{ form.resposta_correta.label }}</label>
+                        {{ form.resposta_correta(class="form-select" + (" is-invalid" if form.resposta_correta.errors else "")) }}
+                        {% if form.resposta_correta.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.resposta_correta.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">{{ form.subject_id.label }}</label>
+                        {{ form.subject_id(class="form-select" + (" is-invalid" if form.subject_id.errors else "")) }}
+                        {% if form.subject_id.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.subject_id.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">{{ form.topic_id.label }}</label>
+                        {{ form.topic_id(class="form-select") }}
+                    </div>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">{{ form.dificuldade.label }}</label>
+                        {{ form.dificuldade(class="form-select") }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">{{ form.ano.label }}</label>
+                        {{ form.ano(class="form-control" + (" is-invalid" if form.ano.errors else ""), placeholder="Ex: 2023") }}
+                        {% if form.ano.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.ano.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">{{ form.fonte.label }}</label>
+                        {{ form.fonte(class="form-control" + (" is-invalid" if form.fonte.errors else ""), placeholder="Ex: ENEM 2023") }}
+                        {% if form.fonte.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.fonte.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="d-flex gap-2 mt-4">
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a href="{{ url_for('questions.list_questions') }}" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

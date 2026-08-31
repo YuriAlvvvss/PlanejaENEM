@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Excluir Questão - PlanejaENEM{% endblock %}
+
+{% block content %}
+<div class="confirm-card card border-danger">
+    <div class="card-body text-center">
+        <div class="mb-3">
+            <span class="status-pill" style="background: rgba(255, 106, 122, 0.12); color: #ffb1bb;">Atenção</span>
+        </div>
+        <h4 class="text-danger mb-3">Confirmar exclusão</h4>
+        <p class="mb-2">Tem certeza que deseja excluir esta questão?</p>
+        <p class="text-muted small mb-4">O enunciado: <em>"{{ question.enunciado[:100] }}{% if question.enunciado|length > 100 %}...{% endif %}"</em> será removido permanentemente, junto com todas as tentativas registradas.</p>
+        <div class="d-flex justify-content-center gap-2">
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-danger">Sim, excluir</button>
+            </form>
+            <a href="{{ url_for('questions.view_question', id=question.id) }}" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

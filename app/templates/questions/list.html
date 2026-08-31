@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Questões - PlanejaENEM{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="eyebrow">Avaliação</div>
+        <h2>Questões</h2>
+    </div>
+    <a href="{{ url_for('questions.create_question_view') }}" class="btn btn-primary">+ Nova Questão</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small">Matéria</label>
+                <select name="subject" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">Todas</option>
+                    {% for subject in subjects %}
+                    <option value="{{ subject.id }}" {% if filter_subject == subject.id %}selected{% endif %}>{{ subject.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">Assunto</label>
+                <select name="topic" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">Todos</option>
+                    {% for topic in topics %}
+                    <option value="{{ topic.id }}" {% if filter_topic == topic.id %}selected{% endif %}>{{ topic.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if questions %}
+<div class="table-responsive table-modern">
+    <table class="table table-hover mb-0">
+        <thead>
+            <tr>
+                <th>Enunciado</th>
+                <th>Matéria</th>
+                <th>Assunto</th>
+                <th>Dificuldade</th>
+                <th>Resposta</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for q in questions %}
+            <tr>
+                <td class="fw-semibold">{{ q.enunciado[:80] }}{% if q.enunciado|length > 80 %}...{% endif %}</td>
+                <td>
+                    <span class="status-pill" style="background-color: {{ q.subject.cor }}22; color: {{ q.subject.cor }};">
+                        {{ q.subject.nome }}
+                    </span>
+                </td>
+                <td>{{ q.topic.nome if q.topic else "-" }}</td>
+                <td>
+                    <span class="badge bg-secondary">{{ q.dificuldade }}/5</span>
+                </td>
+                <td><span class="badge bg-success">{{ q.resposta_correta }}</span></td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <a href="{{ url_for('questions.view_question', id=q.id) }}" class="btn btn-outline-primary">Ver</a>
+                        <a href="{{ url_for('questions.edit_question', id=q.id) }}" class="btn btn-outline-secondary">Editar</a>
+                        <a href="{{ url_for('questions.delete_question', id=q.id) }}" class="btn btn-outline-danger">Excluir</a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state text-center">
+    <h5 class="text-muted">Nenhuma questão encontrada</h5>
+    <p class="text-muted mb-0">Crie questões ou ajuste os filtros.</p>
+</div>
+{% endif %}
+{% endblock %}

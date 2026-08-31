@@ -9,7 +9,7 @@ from flask import abort
 from flask_login import current_user
 
 from app.extensions import db
-from app.models import StudyPlan, StudySession, Subject, Task
+from app.models import StudyPlan, StudySession, Subject, Task, Topic, Question, QuestionAttempt
 
 
 def get_user_subject(subject_id, user_id=None):
@@ -57,3 +57,37 @@ def user_owns_task(task_id, user_id=None):
 def user_owns_session(session_id, user_id=None):
     uid = user_id or current_user.id
     return StudySession.query.filter_by(id=session_id, user_id=uid).first() is not None
+
+
+def get_user_topic(topic_id, user_id=None):
+    uid = user_id or current_user.id
+    topic = Topic.query.filter_by(id=topic_id, user_id=uid).first()
+    if topic is None:
+        abort(404)
+    return topic
+
+
+def get_user_question(question_id, user_id=None):
+    uid = user_id or current_user.id
+    question = Question.query.filter_by(id=question_id, user_id=uid).first()
+    if question is None:
+        abort(404)
+    return question
+
+
+def get_user_attempt(attempt_id, user_id=None):
+    uid = user_id or current_user.id
+    attempt = QuestionAttempt.query.filter_by(id=attempt_id, user_id=uid).first()
+    if attempt is None:
+        abort(404)
+    return attempt
+
+
+def user_owns_topic(topic_id, user_id=None):
+    uid = user_id or current_user.id
+    return Topic.query.filter_by(id=topic_id, user_id=uid).first() is not None
+
+
+def user_owns_question(question_id, user_id=None):
+    uid = user_id or current_user.id
+    return Question.query.filter_by(id=question_id, user_id=uid).first() is not None

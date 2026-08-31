@@ -33,6 +33,14 @@
                 <i class="bi bi-calendar3"></i>
                 <span>Cronograma</span>
             </a>
+            <a class="sidebar-link {% if request.endpoint and request.endpoint.startswith('questions.') %}is-active{% endif %}" href="{{ url_for('questions.list_questions') }}">
+                <i class="bi bi-question-circle"></i>
+                <span>Questões</span>
+            </a>
+            <a class="sidebar-link {% if request.endpoint and request.endpoint.startswith('performance.') %}is-active{% endif %}" href="{{ url_for('performance.overview') }}">
+                <i class="bi bi-bar-chart-line"></i>
+                <span>Desempenho</span>
+            </a>
         </nav>
     </aside>
     <div class="app-main">

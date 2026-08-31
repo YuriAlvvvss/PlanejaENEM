@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - PlanejaENEM{% endblock %}
+
+{% block content %}
+<div class="auth-shell">
+    <div class="auth-card card" style="max-width: 620px;">
+        <div class="card-body">
+            <div class="text-center mb-4">
+                <div class="eyebrow">Assunto</div>
+                <h3>{{ title }}</h3>
+            </div>
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="mb-3">
+                    <label class="form-label">{{ form.nome.label }}</label>
+                    {{ form.nome(class="form-control" + (" is-invalid" if form.nome.errors else ""), placeholder="Ex: Funções, Equações, etc.") }}
+                    {% if form.nome.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.nome.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">{{ form.subject_id.label }}</label>
+                    {{ form.subject_id(class="form-select" + (" is-invalid" if form.subject_id.errors else "")) }}
+                    {% if form.subject_id.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.subject_id.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="d-flex gap-2 mt-4">
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a href="{{ url_for('questions.list_topics') }}" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

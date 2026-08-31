@@ -27,6 +27,11 @@ class User(UserMixin, db.Model):
     study_sessions = db.relationship(
         "StudySession", backref="user", lazy=True, cascade="all, delete-orphan"
     )
+    topics = db.relationship("Topic", backref="user", lazy=True, cascade="all, delete-orphan")
+    questions = db.relationship("Question", backref="user", lazy=True, cascade="all, delete-orphan")
+    question_attempts = db.relationship(
+        "QuestionAttempt", backref="user", lazy=True, cascade="all, delete-orphan"
+    )
 
     def set_senha(self, senha):
         self.senha_hash = generate_password_hash(senha)
@@ -245,3 +250,78 @@ class StudySession(db.Model):
 
     def __repr__(self):
         return f"<StudySession {self.subject_id} {self.session_date} {self.start_time}>"
+
+
+class Topic(db.Model):
+    __tablename__ = "topics"
+    __table_args__ = (
+        db.Index("idx_topic_user_id", "user_id"),
+        db.Index("idx_topic_subject_id", "subject_id"),
+        db.Index("idx_topic_user_subject", "user_id", "subject_id"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(150), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    subject = db.relationship("Subject", backref=db.backref("topics", lazy=True, cascade="all, delete-orphan"))
+
+    def __repr__(self):
+        return f"<Topic {self.nome}>"
+
+
+class Question(db.Model):
+    __tablename__ = "questions"
+    __table_args__ = (
+        db.Index("idx_question_user_id", "user_id"),
+        db.Index("idx_question_subject_id", "subject_id"),
+        db.Index("idx_question_topic_id", "topic_id"),
+        db.Index("idx_question_user_subject", "user_id", "subject_id"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    enunciado = db.Column(db.Text, nullable=False)
+    alternativa_a = db.Column(db.String(500), nullable=False)
+    alternativa_b = db.Column(db.String(500), nullable=False)
+    alternativa_c = db.Column(db.String(500), nullable=False)
+    alternativa_d = db.Column(db.String(500), nullable=False)
+    alternativa_e = db.Column(db.String(500), nullable=False)
+    resposta_correta = db.Column(db.String(1), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False, index=True)
+    topic_id = db.Column(db.Integer, db.ForeignKey("topics.id"), nullable=True, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    dificuldade = db.Column(db.Integer, nullable=False, default=3)
+    ano = db.Column(db.Integer, nullable=True)
+    fonte = db.Column(db.String(200), nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    subject = db.relationship("Subject", backref=db.backref("questions", lazy=True, cascade="all, delete-orphan"))
+    topic = db.relationship("Topic", backref=db.backref("questions", lazy=True))
+
+    def __repr__(self):
+        return f"<Question {self.id}>"
+
+
+class QuestionAttempt(db.Model):
+    __tablename__ = "question_attempts"
+    __table_args__ = (
+        db.Index("idx_attempt_user_id", "user_id"),
+        db.Index("idx_attempt_question_id", "question_id"),
+        db.Index("idx_attempt_user_question", "user_id", "question_id"),
+        db.Index("idx_attempt_attempted_at", "attempted_at"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    question_id = db.Column(db.Integer, db.ForeignKey("questions.id"), nullable=False, index=True)
+    resposta = db.Column(db.String(1), nullable=False)
+    correta = db.Column(db.Boolean, nullable=False)
+    tempo_segundos = db.Column(db.Integer, nullable=True)
+    attempted_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    question = db.relationship("Question", backref=db.backref("attempts", lazy=True, cascade="all, delete-orphan"))
+
+    def __repr__(self):
+        return f"<QuestionAttempt user={self.user_id} q={self.question_id} correct={self.correta}>"

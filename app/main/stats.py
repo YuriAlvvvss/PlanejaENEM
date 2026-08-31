@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta, timezone
 
 from app.areas import AREA_LABELS, area_label, infer_area
-from app.models import StudyPlan, StudySession, Subject, Task
+from app.models import StudyPlan, StudySession, Subject, Task, QuestionAttempt, Question
 
 REVIEW_INTERVAL_DAYS = 7
 WEEK_COUNT = 8
@@ -213,6 +213,10 @@ def build_dashboard_stats(user, today=None):
     streak = compute_streak(activity_dates_for_user(user.id, tasks, sessions), today)
     completed_tasks = sum(1 for task in tasks if task.concluida)
 
+    total_attempts = QuestionAttempt.query.filter_by(user_id=user.id).count()
+    correct_attempts = QuestionAttempt.query.filter_by(user_id=user.id, correta=True).count()
+    question_accuracy = round((correct_attempts / total_attempts) * 100) if total_attempts > 0 else 0
+
     charts = {
         "hoursPerWeek": {
             "labels": week_labels,
@@ -258,6 +262,9 @@ def build_dashboard_stats(user, today=None):
         "area_stats": area_stats,
         "subject_time": subject_time,
         "charts": charts,
+        "total_attempts": total_attempts,
+        "correct_attempts": correct_attempts,
+        "question_accuracy": question_accuracy,
     }
 
 

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Questão - PlanejaENEM{% endblock %}
+
+{% block content %}
+<div class="auth-shell">
+    <div class="auth-card card" style="max-width: 800px;">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-4">
+                <div>
+                    <div class="eyebrow">Questão #{{ question.id }}</div>
+                    <h3>Responder Questão</h3>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('questions.edit_question', id=question.id) }}" class="btn btn-outline-secondary btn-sm">Editar</a>
+                    <a href="{{ url_for('questions.delete_question', id=question.id) }}" class="btn btn-outline-danger btn-sm">Excluir</a>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <span class="status-pill" style="background-color: {{ question.subject.cor }}22; color: {{ question.subject.cor }};">
+                    {{ question.subject.nome }}
+                </span>
+                {% if question.topic %}
+                <span class="badge bg-secondary ms-1">{{ question.topic.nome }}</span>
+                {% endif %}
+                <span class="badge bg-secondary ms-1">Dificuldade: {{ question.dificuldade }}/5</span>
+                {% if question.ano %}
+                <span class="badge bg-secondary ms-1">{{ question.ano }}</span>
+                {% endif %}
+                {% if question.fonte %}
+                <span class="badge bg-secondary ms-1">{{ question.fonte }}</span>
+                {% endif %}
+            </div>
+
+            <div class="card bg-light mb-4">
+                <div class="card-body">
+                    <p class="mb-0" style="white-space: pre-wrap;">{{ question.enunciado }}</p>
+                </div>
+            </div>
+
+            <form method="POST" action="{{ url_for('questions.answer_question', id=question.id) }}">
+                {{ form.hidden_tag() }}
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Alternativas</label>
+                    <div class="d-flex flex-column gap-2">
+                        {% for alt_letter, alt_text in [('A', question.alternativa_a), ('B', question.alternativa_b), ('C', question.alternativa_c), ('D', question.alternativa_d), ('E', question.alternativa_e)] %}
+                        <div class="form-check answer-option">
+                            {{ form.resposta(class="form-check-input", value=alt_letter, id="alt_" + alt_letter) }}
+                            <label class="form-check-label" for="alt_{{ alt_letter }}">
+                                <strong>{{ alt_letter }})</strong> {{ alt_text }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% if form.resposta.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.resposta.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">{{ form.tempo_segundos.label }}</label>
+                    {{ form.tempo_segundos(class="form-control", placeholder="Opcional: tempo em segundos", style="max-width: 300px;") }}
+                    {% if form.tempo_segundos.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.tempo_segundos.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                {{ form.submit(class="btn btn-primary btn-lg") }}
+            </form>
+
+            <hr class="my-4">
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">Histórico de Tentativas</h5>
+                <span class="badge bg-secondary">{{ attempt_count }} tentativa(s)</span>
+            </div>
+            {% if recent_attempts %}
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Sua Resposta</th>
+                            <th>Correta</th>
+                            <th>Tempo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for att in recent_attempts %}
+                        <tr>
+                            <td>{{ att.attempted_at.strftime('%d/%m %H:%M') }}</td>
+                            <td><span class="badge bg-secondary">{{ att.resposta }}</span></td>
+                            <td>
+                                {% if att.correta %}
+                                <span class="badge bg-success">Acertou</span>
+                                {% else %}
+                                <span class="badge bg-danger">Errou</span>
+                                {% endif %}
+                            </td>
+                            <td>{% if att.tempo_segundos is not none %}{{ att.tempo_segundos }}s{% else %}-{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted">Nenhuma tentativa registrada ainda.</p>
+            {% endif %}
+
+            <div class="mt-3">
+                <a href="{{ url_for('questions.list_questions') }}" class="btn btn-secondary">Voltar</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.answer-option {
+    padding: 10px 14px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    transition: background 0.15s;
+}
+.answer-option:hover {
+    background: #f8f9fa;
+}
+.answer-option input:checked + label {
+    font-weight: 600;
+}
+</style>
+{% endblock %}
