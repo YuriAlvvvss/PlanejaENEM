@@ -211,6 +211,12 @@ def create_app(config_name=None):
 
     limiter.init_app(app)
 
+    from app.ai import AIClient, UsageTracker, load_ai_config
+    ai_config = load_ai_config()
+    ai_tracker = UsageTracker()
+    app.ai_client = AIClient(ai_config, ai_tracker)
+    app.ai_tracker = ai_tracker
+
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Faça login para acessar esta página."
     login_manager.login_message_category = "warning"
