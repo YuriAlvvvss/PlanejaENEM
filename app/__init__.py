@@ -260,6 +260,7 @@ def create_app(config_name=None):
         return response
 
     from app.auth import auth_bp
+    from app.assessment import assessment_bp
     from app.decision_engine import decision_engine_bp
     from app.main import main_bp
     from app.planner import planner_bp
@@ -269,6 +270,7 @@ def create_app(config_name=None):
     from app.tasks import tasks_bp
 
     app.register_blueprint(auth_bp)
+    app.register_blueprint(assessment_bp, url_prefix="/assessment")
     app.register_blueprint(main_bp)
     app.register_blueprint(subjects_bp, url_prefix="/subjects")
     app.register_blueprint(tasks_bp, url_prefix="/tasks")
@@ -280,6 +282,7 @@ def create_app(config_name=None):
     with app.app_context():
         from app import models  # noqa: F401
         from app.performance.models import KnowledgeState  # noqa: F401
+        from app.assessment.models import Assessment, AssessmentQuestion  # noqa: F401
         database_uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
         if database_uri.startswith("sqlite") and not database_uri.endswith(":memory:"):
             db_path = database_uri.replace("sqlite:///", "", 1)

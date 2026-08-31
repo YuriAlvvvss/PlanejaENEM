@@ -10,6 +10,7 @@ from flask_login import current_user
 
 from app.extensions import db
 from app.models import StudyPlan, StudySession, Subject, Task, Topic, Question, QuestionAttempt
+from app.assessment.models import Assessment, AssessmentQuestion
 
 
 def get_user_subject(subject_id, user_id=None):
@@ -91,3 +92,26 @@ def user_owns_topic(topic_id, user_id=None):
 def user_owns_question(question_id, user_id=None):
     uid = user_id or current_user.id
     return Question.query.filter_by(id=question_id, user_id=uid).first() is not None
+
+
+def get_user_assessment(assessment_id, user_id=None):
+    uid = user_id or current_user.id
+    assessment = Assessment.query.filter_by(id=assessment_id, user_id=uid).first()
+    if assessment is None:
+        abort(404)
+    return assessment
+
+
+def get_user_assessment_question(assessment_question_id, user_id=None):
+    uid = user_id or current_user.id
+    aq = AssessmentQuestion.query.filter_by(
+        id=assessment_question_id, user_id=uid
+    ).first()
+    if aq is None:
+        abort(404)
+    return aq
+
+
+def user_owns_assessment(assessment_id, user_id=None):
+    uid = user_id or current_user.id
+    return Assessment.query.filter_by(id=assessment_id, user_id=uid).first() is not None
