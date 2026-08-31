@@ -1,10 +1,19 @@
-# PlanejaENEM 📚
+# PlanejaENEM 4.0 📚
 
-**PlanejaENEM** é uma aplicação web para organização de estudos direcionada aos candidatos do ENEM. A plataforma permite registrar matérias (organizadas por área do ENEM), gerenciar tarefas com repetição espaçada, **cadastrar e responder questões com registro de tentativas**, acompanhar o progresso em tempo real por meio de métricas e gráficos, e gerar um cronograma personalizado de estudos com base na disponibilidade semanal, tempo diário e data da prova.
+**PlanejaENEM** é uma aplicação web para organização de estudos direcionada aos candidatos do ENEM. A versão 4.0 transforma o planner em um **verdadeiro sistema de decisão de estudos** que responde:
+
+1. **O que estudar?**
+2. **Qual assunto?**
+3. **Qual tipo de estudo?**
+4. **Quanto tempo?**
+5. **Quando estudar?**
+6. **Quando revisar?**
+7. **Por que isso foi recomendado?**
+8. **Qual deve ser a próxima ação depois do estudo?**
 
 ## 🎯 Visão Geral
 
-A aplicação foi desenvolvida com **Flask** seguindo a arquitetura de **Application Factory** com **Blueprints**, separando as responsabilidades em autenticação, dashboard, gestão de matérias, tarefas e planejamento. O sistema é multiusuário (cada usuário possui seus próprios dados), com armazenamento em **SQLite** por padrão e fácil migração para PostgreSQL.
+A aplicação foi desenvolvida com **Flask** seguindo a arquitetura de **Application Factory** com **Blueprints**, separando as responsabilidades em autenticação, dashboard, gestão de matérias, tarefas, planejamento, **análise de desempenho** e **motor de decisão**. O sistema é multiusuário (cada usuário possui seus próprios dados), com armazenamento em **SQLite** por padrão e fácil migração para PostgreSQL.
 
 ### ✨ Funcionalidades Principais
 
@@ -33,7 +42,21 @@ A aplicação foi desenvolvida com **Flask** seguindo a arquitetura de **Applica
 - ✅ **Registro de Tentativas**: Responder questões com registro de acerto/erro e tempo opcional
 - ✅ **Estatísticas de Desempenho**: Aproveitamento por matéria, assunto, dificuldade e área do ENEM
 - ✅ **Dashboard de Desempenho**: Página dedicada com gráficos Chart.js, melhor/pior matéria e histórico
-- ✅ **Preparação para Mastery**: Modelagem pronta para futura implementação de domínio/mastery
+- ✅ **PlanejaENEM 3.0**: Sistema de análise de desempenho, domínio por tópico, recomendações e revisão adaptativa
+- ✅ **PlanejaENEM 4.0**: Motor de decisão determinístico com recomendações explicáveis
+
+### 🆕 Novidades do 4.0
+
+- ✅ **Decision Engine**: Motor central de decisão que gera recomendações de estudo
+- ✅ **Recomendações Explicáveis**: Toda recomendação possui reason codes e explicação
+- ✅ **Ranking Determinístico**: Score final baseado em 7 componentes ponderados
+- ✅ **Detecção de Conflitos**: Sistema identifica e resolve conflitos automaticamente
+- ✅ **Simulação de Planos**: Comparar diferentes cenários de estudo
+- ✅ **Modo Debug**: Visualizar scores, pesos e reason codes detalhados
+- ✅ **Dashboard 4.0**: Seção "O que estudar agora?" com recomendações
+- ✅ **Mapa de Domínio**: Visualização por níveis (crítico, baixo, médio, bom, excelente)
+- ✅ **Feedback Loop**: Recálculo automático após cada sessão
+- ✅ **Planos Arquivados**: Histórico preservado ao regenerar planos
 
 ## 🛠 Stack Tecnológico
 
@@ -67,7 +90,7 @@ PlanejaENEM/
 │   │   └── routes.py             # /register, /login, /logout, /profile, /forgot-password, /reset-password, /privacy, /export-data, /delete-account
 │   ├── main/                     # Blueprint principal (dashboard)
 │   │   ├── routes.py            # /, /weekly-goal, /sessions/<id>/toggle, /health
-│   │   └── stats.py             # Cálculo de métricas do dashboard (streak, áreas, gráficos)
+│   │   └── stats.py             # Cálculo de métricas do dashboard (streak, áreas, gráficos, mastery map)
 │   ├── planner/                  # Blueprint de planejamento adaptativo
 │   │   ├── __init__.py          # Blueprint registration
 │   │   ├── routes.py            # /planner, /planner/<id>/regenerate, /planner/<id>/manual, /planner/replan, /planner/diagnostics
@@ -76,6 +99,15 @@ PlanejaENEM/
 │   │   ├── scheduler.py         # Distribuição, balanceamento e tipos de estudo
 │   │   ├── services.py          # Orquestração e integração com modelos
 │   │   └── validators.py        # Validações e tratamento de casos extremos
+│   ├── decision_engine/          # 🆕 Motor de decisão do PlanejaENEM 4.0
+│   │   ├── __init__.py          # Exportações públicas
+│   │   ├── types.py             # Enums, dataclasses, reason codes
+│   │   ├── ranking.py           # Pesos centralizados, FinalScore (7 componentes)
+│   │   ├── policies.py          # Detecção e resolução de conflitos
+│   │   ├── explanations.py      # Reason codes → texto amigável
+│   │   ├── engine.py            # Ciclo completo de decisão
+│   │   ├── simulator.py         # Simulação e comparação de planos
+│   │   └── routes.py            # Endpoints da API
 │   ├── subjects/                 # Blueprint de matérias
 │   │   ├── forms.py             # SubjectForm (com área do ENEM e cor)
 │   │   └── routes.py            # CRUD de matérias
@@ -88,9 +120,13 @@ PlanejaENEM/
 │   │   ├── routes.py            # CRUD de assuntos e questões, resposta de questões
 │   │   └── services.py          # Lógica de negócio para questões e tentativas
 │   ├── performance/             # Blueprint de desempenho
-│   │   ├── __init__.py          # Blueprint registration
-│   │   ├── routes.py            # Dashboard de desempenho
-│   │   └── statistics.py        # Cálculo de estatísticas por matéria/assunto/dificuldade/área
+│   │   ├── __init__.py          # Blueprint registration + KnowledgeState import
+│   │   ├── routes.py            # Dashboard de desempenho + recomendações
+│   │   ├── statistics.py        # Cálculo de estatísticas por matéria/assunto/dificuldade/área
+│   │   ├── models.py            # KnowledgeState (estado de conhecimento por tópico)
+│   │   ├── mastery.py           # Cálculo de mastery score (0-100) e componentes
+│   │   ├── recommendations.py   # Recommendation engine (need score, reason codes)
+│   │   └── services.py          # Orquestrador: atualização de KnowledgeState, recomendações
 │   ├── static/                   # Arquivos estáticos
 │   │   ├── app.js                # JavaScript da aplicação
 │   │   ├── dashboard-charts.js   # Gráficos do dashboard (Chart.js)
@@ -116,10 +152,10 @@ PlanejaENEM/
 │       │   ├── list.html
 │       │   ├── form.html
 │       │   └── confirm_delete.html
-│       └── tasks/
-│           ├── list.html
-│           ├── form.html
-│           └── confirm_delete.html
+│       ├── tasks/
+│       │   ├── list.html
+│       │   ├── form.html
+│       │   └── confirm_delete.html
 │       ├── questions/             # Templates de questões
 │       │   ├── topics.html       # Lista de assuntos
 │       │   ├── topic_form.html   # Formulário de assunto
@@ -128,8 +164,20 @@ PlanejaENEM/
 │       │   ├── question_form.html # Formulário de questão
 │       │   ├── view.html         # Visualizar e responder questão
 │       │   └── confirm_delete_question.html
-│       └── performance/          # Templates de desempenho
-│           └── overview.html     # Dashboard de desempenho com gráficos
+│       ├── performance/          # Templates de desempenho
+│       │   └── overview.html     # Dashboard de desempenho com gráficos
+│       └── decision_engine/      # 🆕 Templates do motor de decisão
+│           ├── recommendations.html  # "O que estudar agora?"
+│           ├── debug.html            # Modo debug com scores detalhados
+│           ├── simulate.html         # Simulação e comparação de planos
+│           ├── simulation_result.html # Resultado da simulação
+│           └── history.html          # Histórico de recomendações
+├── docs/                          # 🆕 Documentação do PlanejaENEM 4.0
+│   ├── architecture.md           # Arquitetura do sistema
+│   ├── scoring.md                # Documentação de scoring e fórmulas
+│   ├── recommendation-engine.md  # Motor de recomendação
+│   ├── adaptive-planner.md       # Planner adaptativo
+│   └── security.md               # Documentação de segurança
 ├── instance/                      # Runtime (ignorado no git)
 │   ├── logs/                     # Logs da aplicação
 │   └── planejaenem.db            # Banco SQLite (criado automaticamente)
@@ -144,7 +192,10 @@ PlanejaENEM/
 │   ├── test_validators.py        # Testes de validadores
 │   ├── test_adaptive_planner.py  # Testes de integração do planner adaptativo
 │   ├── test_phase2_quality.py    # Testes de qualidade
-│   └── test_questions.py         # Testes do módulo de questões
+│   ├── test_questions.py         # Testes do módulo de questões
+│   ├── test_performance_v3.py    # Testes do PlanejaENEM 3.0 (mastery, recommendations, knowledge state)
+│   ├── test_decision_engine.py   # 🆕 Testes determinísticos do motor de decisão (36 testes)
+│   └── test_invariants.py        # 🆕 Testes de invariantes (20 testes)
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
@@ -255,6 +306,9 @@ python -m pytest tests/test_validators.py -v
 python -m pytest tests/test_adaptive_planner.py -v
 python -m pytest tests/test_phase2_quality.py -v
 python -m pytest tests/test_questions.py -v
+python -m pytest tests/test_performance_v3.py -v
+python -m pytest tests/test_decision_engine.py -v   # 🆕 Decision Engine
+python -m pytest tests/test_invariants.py -v        # 🆕 Invariantes
 ```
 
 ## 🔗 Rotas Principais
@@ -271,9 +325,9 @@ python -m pytest tests/test_questions.py -v
 - `GET/POST /auth/delete-account` - Excluir conta e todos os dados
 
 ### Dashboard (`/`)
-- `GET      /` - Dashboard principal (protegida)
+- `GET      /` - Dashboard principal (protegida) - 🆕 Inclui "O que estudar agora?" e Mapa de Domínio
 - `POST     /weekly-goal` - Atualizar meta semanal de estudo (horas)
-- `POST     /sessions/<id>/toggle` - Marcar/desmarcar conclusão de uma sessão
+- `POST     /sessions/<id>/toggle` - Marcar/desmarcar conclusão de uma sessão (🆕 atualiza status)
 - `GET      /health` - Status da aplicação (público)
 
 ### Matérias (`/subjects`)
@@ -292,10 +346,17 @@ python -m pytest tests/test_questions.py -v
 
 ### Planejamento (`/planner`)
 - `GET/POST /planner` - Visualizar e gerar cronograma adaptativo (POST gera o plano)
-- `POST     /planner/<id>/regenerate` - Regenerar plano existente
+- `POST     /planner/<id>/regenerate` - 🆕 Arquiva plano anterior (preserva histórico)
 - `POST     /planner/<id>/manual` - Ajuste manual de uma sessão (matéria/anotações)
 - `POST     /planner/replan` - Replanejar sessões perdidas
 - `GET      /planner/diagnostics` - Diagnóstico de desempenho por área
+
+### 🆕 Decision Engine (`/decision-engine`)
+- `GET      /decision-engine/recommendations` - Recomendações atuais com reason codes
+- `GET      /decision-engine/api/recommendations` - API JSON das recomendações
+- `GET      /decision-engine/debug` - Modo debug com scores, pesos e componentes
+- `GET/POST /decision-engine/simulate` - Simular e comparar planos A vs B
+- `GET      /decision-engine/history` - Histórico de recomendações e sessões
 
 ### Questões (`/questions`)
 - `GET      /questions` - Listar questões (filtros: `?subject=<id>`, `?topic=<id>`)
@@ -322,8 +383,11 @@ python -m pytest tests/test_questions.py -v
 6. **Gerenciar Tarefas** em `/tasks`: vincule a uma matéria, defina data prevista e prioridade; marque como concluídas (gera data de revisão).
 7. **Definir Meta Semanal** no dashboard (campo "Meta semanal").
 8. **Gerar Cronograma** em `/planner`: informe dias disponíveis, faixas horárias, tempo diário e data da prova; ajuste manualmente se necessário e regenere quando quiser.
-9. **Acompanhar Desempenho** em `/performance`: aproveitamento por matéria, assunto, dificuldade e área do ENEM.
-10. **Acompanhar Progresso** no dashboard: taxa de conclusão, streak, cobertura por área, sessões do dia, revisões pendentes e gráficos de horas estudadas.
+9. **Acompanhar "O que estudar agora?"** no dashboard: recomendação principal, domínio, tendência, tempo e motivo.
+10. **Acompanhar Desempenho** em `/performance`: aproveitamento por matéria, assunto, dificuldade e área do ENEM.
+11. **Ver Recomendações Detalhadas** em `/decision-engine/recommendations`: todas as recomendações ordenadas.
+12. **Usar Modo Debug** em `/decision-engine/debug`: analise scores, pesos e reason codes.
+13. **Simular Planos** em `/decision-engine/simulate`: compare diferentes cenários de estudo.
 
 ## 📊 Modelos de Dados
 
@@ -373,6 +437,7 @@ Propriedades úteis: `progress_percent`, `priority_score`, `area_label`, `total_
 - daily_minutes         # tempo diário de estudo
 - available_days        # String (ex: "seg,qua,sex")
 - available_hours       # String (ex: "08:00-10:00,14:00-16:00")
+- is_active             # 🆕 Boolean (True = plano atual, False = arquivado)
 - generated_at
 - last_regenerated_at
 ```
@@ -383,6 +448,7 @@ Propriedades úteis: `progress_percent`, `priority_score`, `area_label`, `total_
 - plan_id
 - user_id
 - subject_id            # (não há task_id; a sessão referencia a matéria)
+- topic_id              # FK -> Topic (opcional, v3.0)
 - session_date          # Date
 - start_time            # Time
 - end_time              # Time
@@ -391,8 +457,11 @@ Propriedades úteis: `progress_percent`, `priority_score`, `area_label`, `total_
 - completed_at
 - priority_score
 - session_type          # "teoria" | "exercicios" | "questoes_enem" | "revisao" | "simulado"
+- status                # 🆕 "scheduled" | "completed" | "missed" | "rescheduled" | "cancelled"
 - manual_override       # ajuste manual
 - notes
+- reason_codes          # 🆕 reason codes da recomendação
+- explanation           # 🆕 explicação legível
 - created_at / updated_at
 ```
 
@@ -434,6 +503,342 @@ Propriedades úteis: `progress_percent`, `priority_score`, `area_label`, `total_
 - tempo_segundos          # tempo gasto em segundos (opcional)
 - attempted_at            # DateTime da tentativa
 ```
+
+### KnowledgeState (Estado de Conhecimento - v3.0)
+```python
+- id
+- user_id                 # FK -> User (isolamento multiusuário)
+- subject_id              # FK -> Subject
+- topic_id                # FK -> Topic
+- mastery_score           # 0-100 (score de domínio)
+- confidence_score        # 0-100 (confiança estatística)
+- questions_answered      # total de questões respondidas
+- questions_correct       # questões corretas
+- questions_wrong         # questões incorretas
+- recent_accuracy         # acurácia das últimas 10 tentativas
+- historical_accuracy     # acurácia geral
+- last_attempt_at         # DateTime da última tentativa
+- last_review_at          # DateTime da última revisão
+- consecutive_correct     # acertos consecutivos
+- consecutive_wrong       # erros consecutivos
+- average_response_time   # tempo médio de resposta (segundos)
+- trend                   # "improving" | "stable" | "declining"
+- updated_at              # DateTime da última atualização
+```
+
+## 🧠 PlanejaENEM 4.0 - Motor de Decisão
+
+A versão 4.0 introduz um **motor de decisão determinístico** que transforma dados de desempenho em recomendações de estudo acionáveis e explicáveis.
+
+### Fluxo de Decisão
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    CICLO DE DECISÃO                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  1. COLETAR DADOS                                          │
+│     ├── KnowledgeState (domínio, confiança)                │
+│     ├── Subject (dificuldade, prioridade)                  │
+│     ├── Topic (nome)                                       │
+│     ├── QuestionAttempt (histórico)                        │
+│     └── StudySession (sessões perdidas)                    │
+│                          ↓                                  │
+│  2. CALCULAR SCORES                                        │
+│     ├── NeedScore                                          │
+│     ├── Weakness                                           │
+│     ├── Recency                                            │
+│     ├── ExamUrgency                                        │
+│     ├── ReviewUrgency                                      │
+│     ├── HistoricalImportance                               │
+│     └── StudyConsistency                                   │
+│                          ↓                                  │
+│  3. RANKEAR                                                │
+│     └── FinalScore = Σ(componente × peso)                  │
+│                          ↓                                  │
+│  4. DETECTAR CONFLITOS                                     │
+│     ├── Meta semanal impossível                            │
+│     ├── Excesso de sessões                                 │
+│     ├── Limite diário excedido                             │
+│     └── Sem disponibilidade                                │
+│                          ↓                                  │
+│  5. RESOLVER CONFLITOS                                     │
+│     ├── Priorizar revisões atrasadas                       │
+│     ├── Reduzir duração                                    │
+│     └── Selecionar prioridades mais altas                  │
+│                          ↓                                  │
+│  6. ALOCAR TEMPO                                           │
+│     ├── Respeitar meta semanal                             │
+│     ├── Respeitar limite diário                            │
+│     └── Distribuir entre assuntos                          │
+│                          ↓                                  │
+│  7. GERAR RECOMENDAÇÕES                                    │
+│     ├── Reason codes                                       │
+│     ├── Explicação                                         │
+│     ├── Data recomendada                                   │
+│     └── Duração                                            │
+│                          ↓                                  │
+│  8. RETORNAR LISTA ORDENADA                                │
+│     └── Ordenada por FinalScore (maior = mais urgente)     │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Score Final (FinalScore)
+
+O score final é calculado como uma combinação ponderada de 7 componentes:
+
+```
+FinalScore = 0.25 × NeedScore
+           + 0.20 × Weakness
+           + 0.15 × Recency
+           + 0.15 × ExamUrgency
+           + 0.10 × ReviewUrgency
+           + 0.10 × HistoricalImportance
+           + 0.05 × StudyConsistency
+```
+
+> **Nota**: Estes pesos são heurísticas determinísticas centralizadas em `app/decision_engine/ranking.py` e podem ser ajustados posteriormente com base em validação empírica. Não utilizam IA generativa, LLM ou machine learning.
+
+### Componentes do Score
+
+| Componente | Peso | Descrição |
+|-----------|------|-----------|
+| NeedScore | 25% | Necessidade de estudo (domínio inverso + desempenho + dificuldade + ENEM + revisão + confiança) |
+| Weakness | 20% | Fraqueza no assunto (inverso do domínio + tendência + erros consecutivos) |
+| Recency | 15% | Tempo desde última atividade |
+| ExamUrgency | 15% | Proximidade do ENEM |
+| ReviewUrgency | 10% | Urgência de revisão |
+| HistoricalImportance | 10% | Prioridade e dificuldade definidas pelo usuário |
+| StudyConsistency | 5% | Sessões perdidas |
+
+### Reason Codes
+
+O sistema gera códigos de motivo para explicar cada recomendação:
+
+| Código | Significado |
+|--------|-------------|
+| `low_mastery` | Domínio abaixo de 40% |
+| `moderate_mastery` | Domínio entre 40-70% |
+| `recent_accuracy_drop` | Queda recente de desempenho |
+| `recent_poor_performance` | Desempenho recente abaixo de 50% |
+| `performance_declining` | Queda significativa em relação ao histórico |
+| `overdue_review` | Revisão atrasada |
+| `exam_urgency` | ENEM em menos de 30 dias |
+| `high_difficulty` | Matéria com dificuldade >= 4 |
+| `low_confidence` | Confiança estatística abaixo de 40% |
+| `missed_session` | Sessões perdidas |
+| `no_data` | Poucos dados (< 3 questões) |
+
+### Tipos de Ação
+
+| Ação | Quando Recomendada |
+|------|-------------------|
+| `learn` | Domínio < 40% (teoria urgente) |
+| `practice` | Domínio 40-59% (exercícios) |
+| `enem_questions` | Domínio 60-74% (questões ENEM) |
+| `difficult_questions` | Domínio 75-89% (questões avançadas) |
+| `review` | Domínio >= 90% (manutenção) |
+| `mock_exam` | Simulados completos |
+
+### Progressão de Aprendizagem
+
+O sistema implementa uma progressão lógica:
+
+```
+Domínio < 40% → Teoria + Exercícios Básicos
+      ↓
+Domínio 40-60% → Exercícios Práticos
+      ↓
+Domínio 60-75% → Questões ENEM
+      ↓
+Domínio 75-90% → Questões Difíceis
+      ↓
+Domínio > 90% → Revisão Espaçada + Manutenção
+```
+
+### Detecção e Resolução de Conflitos
+
+O sistema detecta automaticamente:
+
+| Conflito | Severidade | Resolução |
+|----------|-----------|-----------|
+| Meta semanal impossível | Alta | Reduzir duração das sessões |
+| Excesso de sessões por assunto | Média | Manter apenas as N com maior score |
+| Limite diário excedido | Alta | Reduzir para caber no limite |
+| Sem disponibilidade | Crítica | Alertar o usuário |
+| Revisão atrasada + conteúdo novo | Média | Priorizar revisão |
+| Desbalanceamento entre assuntos | Baixa | Equilibrar distribuição |
+
+### Dashboard 4.0
+
+O dashboard principal agora inclui:
+
+```
+┌─────────────────────────────────────────────────┐
+│  🎯 O que estudar agora?                       │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│  Geometria Analítica → Triângulos                │
+│                                                 │
+│  Domínio: 42%  |  Tendência: ↓  |  Confiança: 65%  │
+│                                                 │
+│  Recomendação: 50 min de questões ENEM          │
+│                                                 │
+│  Por quê?                                       │
+│  • domínio baixo                                │
+│  • desempenho recente caiu                      │
+│  • revisão atrasada                             │
+│  • ENEM se aproxima                             │
+│                                                 │
+│  Próximo: Probabilidade — 35 min                │
+│  Depois: Funções — 30 min                       │
+│                                                 │
+└─────────────────────────────────────────────────┘
+```
+
+### Mapa de Domínio
+
+Visualização por níveis:
+
+| Faixa | Nível | Cor | Ação |
+|-------|-------|-----|------|
+| 0-39% | Crítico | Vermelho | Teoria urgente |
+| 40-59% | Baixo | Laranja | Exercícios |
+| 60-74% | Médio | Amarelo | Questões ENEM |
+| 75-89% | Bom | Verde Claro | Questões difíceis |
+| 90-100% | Excelente | Verde Escuro | Manutenção |
+
+### Feedback Loop
+
+Após cada sessão de estudo:
+
+```
+Sessão Concluída
+      ↓
+Atualizar KnowledgeState
+      ↓
+Recalcular MasteryScore
+      ↓
+Atualizar Tendência
+      ↓
+Recalcular Necessidade
+      ↓
+Gerar Novas Recomendações
+```
+
+### Modo Debug
+
+O modo debug fornece informações detalhadas sobre o cálculo:
+
+```
+======================================================================
+PLANEJAENEM 4.0 - MODO DEBUG
+======================================================================
+
+Total de tópicos analisados: 15
+Total de recomendações: 8
+Tempo total recomendado: 480min
+Fase de estudo: medium_term
+Dias até o ENEM: 45
+
+----------------------------------------------------------------------
+RECOMENDAÇÕES ORDENADAS:
+----------------------------------------------------------------------
+
+#1 - Matemática → Funções
+    Score: 72.50
+    Domínio: 35%
+    Confiança: 45%
+    Ação: practice
+    Duração: 40min
+    Motivos: Domínio baixo | ENEM próximo
+
+#2 - Português → Interpretação de Texto
+    Score: 65.20
+    ...
+```
+
+### Simulação de Planos
+
+O simulador permite comparar diferentes cenários:
+
+```python
+# Plano A: 60min/dia, 300min/semana
+# Plano B: 90min/dia, 630min/semana
+
+Resultado:
+- Plano A: 65% de cobertura de prioridades
+- Plano B: 82% de cobertura de prioridades
+- Recomendação: Plano B é mais adequado
+```
+
+> **IMPORTANTE**: O sistema NÃO prevê nota do ENEM. Usa linguagem de "cobertura de prioridades" e "adequação ao perfil".
+
+## 🧠 PlanejaENEM 3.0 - Sistema de Análise de Desempenho
+
+A versão 3.0 introduz uma camada completa de análise de desempenho que transforma dados brutos de tentativas em **estado de conhecimento**, **recomendações** e **revisão adaptativa**.
+
+### Fluxo de Dados
+
+```
+Questões → Tentativas → Estatísticas → KnowledgeState → Recommendation Engine → Planner
+```
+
+### Mastery Score
+
+O score de domínio (0-100) é calculado combinando 6 fatores ponderados:
+
+| Componente | Peso | Descrição |
+|-----------|------|-----------|
+| Acurácia Geral | 35% | Percentual histórico de acertos |
+| Desempenho Recente | 20% | Comparação últimas 10 tentativas vs histórico |
+| Dificuldade | 15% | Dificuldade média das questões respondidas |
+| Consistência | 10% | Padrão de acertos/erros consecutivos |
+| Recência | 10% | Tempo desde última atividade |
+| Confiança Estatística | 10% | Quantidade de evidências disponíveis |
+
+> **Nota**: Estes pesos são heurísticas determinísticas e podem ser ajustados posteriormente com base em validação empírica. Não utilizam IA generativa, LLM ou machine learning.
+
+**Fórmula:**
+```
+mastery = (accuracy × 0.35) + (recent × 0.20) + (difficulty × 0.15) + 
+          (consistency × 0.10) + (recency × 0.10) + (confidence × 0.10)
+```
+
+### Confiança Estatística
+
+O sistema evita considerar poucas evidências como domínio consolidado:
+
+| Questões Respondidas | Confiança |
+|---------------------|-----------|
+| 0 | 0% |
+| 1 | ~7% |
+| 3 | ~21% |
+| 10 | ~55% |
+| 30 | ~91% |
+| 50+ | ~98% |
+
+### Tendência
+
+Compara desempenho recente com histórico:
+- **melhorando**: diferença ≥ +5%
+- **estável**: diferença entre -5% e +5%
+- **piorando**: diferença ≤ -5%
+
+### Revisão Espaçada com Domínio
+
+A revisão agora considera o mastery score real:
+
+| Domínio | Intervalo |
+|---------|-----------|
+| ≥ 90% | 30 dias |
+| 75-89% | 14 dias |
+| 60-74% | 7 dias |
+| 40-59% | 3 dias |
+| < 40% | 1 dia |
+
+O intervalo é ajustado por acertos/erros consecutivos.
 
 ## 🧠 Adaptive Planner
 
@@ -514,9 +919,11 @@ O algoritmo evita concentração excessiva:
 
 Quando sessões são perdidas (data passada e não concluída):
 1. Detecta automaticamente as sessões perdidas
-2. Marca como concluídas com anotação de reagendamento
-3. Cria novas sessões com bônus de prioridade
-4. Redistribui respeitando a disponibilidade do usuário
+2. Marca como perdidas (status `missed`)
+3. Recalcula a prioridade
+4. Reagenda se houver disponibilidade
+5. Registra que foi reagendada
+6. Não contamina horas estudadas
 
 ### Metas Semanais Adaptativas
 
@@ -524,6 +931,8 @@ A meta semanal de minutos é distribuída proporcionalmente entre as matérias:
 - Matéria com maior score recebe mais tempo
 - Mínimo de 30 min por matéria para garantir cobertura
 - Total não excede a meta semanal definida
+
+> Quando o tempo disponível não é suficiente: "Seu tempo disponível não é suficiente para cobrir todas as prioridades." O sistema seleciona apenas as prioridades mais importantes.
 
 ### Diagnóstico
 
@@ -550,7 +959,7 @@ Por que Matemática recebeu mais tempo?
 ### Banco de Dados
 - Padrão: SQLite em `instance/planejaenem.db` (criado automaticamente na primeira execução).
 - Compatível com PostgreSQL: basta ajustar `DATABASE_URL` (ex: `postgresql://usuario:senha@host:5432/planejaenem`).
-- **Migração de bancos legados**: `migrate_legacy_database()` em `app/__init__.py` adiciona colunas ausentes (prioridade, dificuldade, area, weekly_goal_minutes, completed_at, next_review_date, etc.) em bancos SQLite existentes.
+- **Migração de bancos legados**: `migrate_legacy_database()` em `app/__init__.py` adiciona colunas ausentes (prioridade, dificuldade, area, weekly_goal_minutes, completed_at, next_review_date, status, is_active, etc.) em bancos SQLite existentes.
 
 ### Logging
 - Gravado em `instance/logs/planejaenem.log` com `RotatingFileHandler` (10 MB × 10 backups).
@@ -586,6 +995,27 @@ Por que Matemática recebeu mais tempo?
 
 ## 🚦 Status do Projeto
 
+### PlanejaENEM 4.0 (Atual)
+- ✅ **Decision Engine**: Motor central de decisão determinístico
+- ✅ **Recomendações Explicáveis**: Reason codes e explicações em texto
+- ✅ **Ranking Determinístico**: Score final com 7 componentes ponderados
+- ✅ **Detecção de Conflitos**: 6 tipos de conflito detectados e resolvidos
+- ✅ **Simulação de Planos**: Comparação A vs B com métricas
+- ✅ **Modo Debug**: Scores, pesos e componentes detalhados
+- ✅ **Dashboard 4.0**: "O que estudar agora?" e Mapa de Domínio
+- ✅ **Feedback Loop**: Recálculo automático pós-sessão
+- ✅ **Planos Arquivados**: Histórico preservado
+- ✅ **Status de Sessões**: scheduled, completed, missed, rescheduled, cancelled
+
+### PlanejaENEM 3.0
+- ✅ **KnowledgeState**: Estado de conhecimento por tópico
+- ✅ **Mastery Score**: Score de domínio (0-100) com 6 componentes
+- ✅ **Confiança Estatística**: Evita conclusões com poucos dados
+- ✅ **Tendência**: improving, stable, declining
+- ✅ **Recomendação de Próximo Tópico**: Need score com reason codes
+- ✅ **Revisão Espaçada**: Intervalos adaptativos baseados em domínio
+
+### Funcionalidades Gerais
 - ✅ Autenticação segura (força de senha + lockout)
 - ✅ CRUD de matérias (com áreas do ENEM) e tarefas
 - ✅ Repetição espaçada adaptativa (1-30 dias baseado em desempenho)
@@ -594,7 +1024,7 @@ Por que Matemática recebeu mais tempo?
 - ✅ **Replanejamento**: Detecção e reagendamento de sessões perdidas
 - ✅ **Diagnóstico**: Análise de desempenho por área do ENEM
 - ✅ **Explicabilidade**: Algoritmo pode justificar prioridades
-- ✅ Suite de testes automatizados (295 testes)
+- ✅ Suite de testes automatizados (426 testes)
 - ✅ Interface premium (animações, glassmorphism)
 - ✅ Pronto para produção com Docker (exige `SECRET_KEY`)
 - ✅ **LGPD**: exportação de dados e exclusão de conta
@@ -604,11 +1034,18 @@ Por que Matemática recebeu mais tempo?
 - ✅ **Sistema de Questões**: CRUD de questões, assuntos, tentativas e estatísticas
 - ✅ **Dashboard de Desempenho**: Gráficos por matéria, assunto, dificuldade e área
 - ✅ **Proteção IDOR estendida**: Questões e tentativas protegidas contra acesso cross-user
+- ✅ **PlanejaENEM 3.0**: KnowledgeState, mastery score, recomendações, reason codes e revisão adaptativa
+- ✅ **PlanejaENEM 4.0**: Decision Engine determinístico com recomendações explicáveis
 
 ## 📚 Documentação Adicional
 
 - **[SECURITY.md](SECURITY.md)** - Documentação completa de segurança
 - **[PREMIUM_UPGRADES.md](PREMIUM_UPGRADES.md)** - Recursos premium, animações e melhorias visuais
+- **[docs/architecture.md](docs/architecture.md)** - 🆕 Arquitetura do PlanejaENEM 4.0
+- **[docs/scoring.md](docs/scoring.md)** - 🆕 Documentação de scoring e fórmulas
+- **[docs/recommendation-engine.md](docs/recommendation-engine.md)** - 🆕 Motor de recomendação
+- **[docs/adaptive-planner.md](docs/adaptive-planner.md)** - 🆕 Planner adaptativo
+- **[docs/security.md](docs/security.md)** - 🆕 Documentação de segurança detalhada
 - Docstrings em português e modelo normalizado
 - Scripts de inicialização: `run.py`, `run.sh`, `run.bat`
 
@@ -625,6 +1062,7 @@ Por que Matemática recebeu mais tempo?
 - Escreva testes para novas funcionalidades
 - Campos, rotas e mensagens em português
 - Atualize o README quando necessário
+- Documente pesos e fórmulas em `docs/scoring.md`
 
 ## 📝 Licença
 
@@ -636,4 +1074,4 @@ Ferramenta de preparação para o ENEM.
 
 ---
 
-**Última atualização**: Agosto 2026 - Sistema de questões, tentativas e desempenho
+**Última atualização**: Agosto 2026 - PlanejaENEM 4.0 (motor de decisão determinístico, recomendações explicáveis, simulação de planos)
