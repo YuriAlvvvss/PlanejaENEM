@@ -99,6 +99,46 @@
 - Apenas caminhos relativos são permitidos
 - URLs absolutas e `//` são bloqueadas
 
+## AI Security (PlanejaENEM 5.0)
+
+### Prompt Injection Protection
+
+- ~25 padrões de ataque detectados via regex
+- `sanitize_user_content()` remove HTML, JS, null bytes, decodifica entidades
+- `has_injection_attempt()` detecta: "ignore instructions", "you are now", "pretend", "jailbreak", "system:" injection, "<|im_start|>" injection
+- `build_safe_prompt()` isola conteúdo do usuário em bloco delimitado
+- Conteúdo sanitizado nunca é tratado como instrução
+
+### Output Validation
+
+- `validate_text_output()` detecta HTML perigoso, XSS, scripts
+- `validate_question_output()` valida campos obrigatórios, range de resposta, range de dificuldade
+- `validate_explanation_output()`, `validate_feedback_output()`, `validate_review_output()` validam campos obrigatórios
+- `sanitize_output()` remove conteúdo perigoso antes de salvar/mostrar
+- Output bruto da IA NUNCA é salvo diretamente no banco
+
+### Rate Limiting por Feature
+
+- Limite por feature + usuário (explicações, revisões, feedbacks)
+- Features essenciais (planner, dashboard, statistics) nunca são bloqueadas
+- Limite configurável via variáveis de ambiente
+- Reset por usuário ou global
+
+### Budget Enforcement
+
+- Orçamento diário e mensal configurável
+- Bloqueio de features não-essenciais quando orçamento excedido
+- Features essenciais continuam funcionando
+- Alertas de orçamento via logs
+- Tracking completo: tokens, custo, latência, status
+
+### Usage Persistence
+
+- Tabela `ai_usage` com tracking completo
+- Índices para queries de análise
+- Dados: user_id, feature, model, tokens, latency, cost, status
+- Retenção configurável
+
 ## Recuperação de Senha
 
 - Token criptograficamente seguro (`secrets.token_urlsafe`)

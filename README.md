@@ -1,6 +1,6 @@
-# PlanejaENEM 4.0 📚
+# PlanejaENEM 5.0 📚
 
-**PlanejaENEM** é uma aplicação web para organização de estudos direcionada aos candidatos do ENEM. A versão 4.0 transforma o planner em um **verdadeiro sistema de decisão de estudos** que responde:
+**PlanejaENEM** é uma aplicação web para organização de estudos direcionada aos candidatos do ENEM. A versão 5.0 adiciona **observabilidade de IA, controle de custos e segurança avançada** — monitorando uso de IA, controlando orçamentos e protegendo contra prompt injection.
 
 1. **O que estudar?**
 2. **Qual assunto?**
@@ -1036,6 +1036,7 @@ Por que Matemática recebeu mais tempo?
 - ✅ **Proteção IDOR estendida**: Questões e tentativas protegidas contra acesso cross-user
 - ✅ **PlanejaENEM 3.0**: KnowledgeState, mastery score, recomendações, reason codes e revisão adaptativa
 - ✅ **PlanejaENEM 4.0**: Decision Engine determinístico com recomendações explicáveis
+- ✅ **PlanejaENEM 5.0**: AI Observability, Cost Management e Security (80 testes)
 
 ## 📚 Documentação Adicional
 
@@ -1046,6 +1047,7 @@ Por que Matemática recebeu mais tempo?
 - **[docs/recommendation-engine.md](docs/recommendation-engine.md)** - 🆕 Motor de recomendação
 - **[docs/adaptive-planner.md](docs/adaptive-planner.md)** - 🆕 Planner adaptativo
 - **[docs/security.md](docs/security.md)** - 🆕 Documentação de segurança detalhada
+- **[docs/ai-observability.md](docs/ai-observability.md)** - 🆕 AI Observability, Cost Management e Security
 - Docstrings em português e modelo normalizado
 - Scripts de inicialização: `run.py`, `run.sh`, `run.bat`
 
