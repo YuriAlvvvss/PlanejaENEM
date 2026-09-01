@@ -313,7 +313,7 @@ class AIClient:
         content = ""
         choices = data.get("choices", [])
         if choices:
-            content = choices[0].get("message", {}).get("content", "")
+            content = choices[0].get("message", {}).get("content", "") or ""
 
         model = data.get("model", self._config.model)
         usage = UsageInfo.from_dict(data.get("usage"))

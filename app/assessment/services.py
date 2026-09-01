@@ -266,13 +266,56 @@ def get_next_question(assessment_id: int, user_id: int) -> dict:
     if question:
         aq.question_id = question.id
     else:
-        # Sem questão no banco: marcar para geração via IA
-        aq.generated_question_data = json.dumps({
-            "area": decision.area,
-            "subject_name": decision.subject_name,
-            "topic_name": decision.topic_name,
-            "difficulty": adjusted_difficulty,
-        })
+        # Tentar gerar questão via IA
+        ai_generated = False
+        try:
+            from flask import current_app
+            from app.ai.question_generator import QuestionGenerator
+
+            gen = current_app.question_generator
+            if gen.enabled:
+                generated = gen.generate_single(
+                    user_id=str(user_id),
+                    area=decision.area,
+                    materia=decision.subject_name,
+                    assunto=decision.topic_name,
+                    dificuldade=int(round(adjusted_difficulty)),
+                )
+                if generated:
+                    db_dict = generated.to_db_dict()
+                    new_question = Question(
+                        enunciado=db_dict["enunciado"],
+                        alternativa_a=db_dict["alternativa_a"],
+                        alternativa_b=db_dict["alternativa_b"],
+                        alternativa_c=db_dict["alternativa_c"],
+                        alternativa_d=db_dict["alternativa_d"],
+                        alternativa_e=db_dict["alternativa_e"],
+                        resposta_correta=db_dict["resposta_correta"],
+                        subject_id=decision.subject_id,
+                        topic_id=decision.topic_id,
+                        user_id=user_id,
+                        dificuldade=db_dict["dificuldade"],
+                        fonte=db_dict.get("fonte", "ai"),
+                    )
+                    db.session.add(new_question)
+                    db.session.flush()
+                    aq.question_id = new_question.id
+                    question = new_question
+                    ai_generated = True
+                    logger.info(
+                        "Questão gerada via IA #%d para avaliação #%d",
+                        new_question.id, assessment.id,
+                    )
+        except Exception as exc:
+            logger.warning("Erro ao gerar questão via IA: %s", exc)
+
+        if not ai_generated:
+            aq.generated_question_data = json.dumps({
+                "area": decision.area,
+                "subject_name": decision.subject_name,
+                "topic_name": decision.topic_name,
+                "difficulty": adjusted_difficulty,
+            })
 
     db.session.add(aq)
     db.session.commit()
@@ -291,7 +334,7 @@ def get_next_question(assessment_id: int, user_id: int) -> dict:
         "subject_name": decision.subject_name,
         "topic_name": decision.topic_name,
         "reason": decision.reason,
-        "needs_ai_generation": question is None,
+        "needs_ai_generation": question is None and not ai_generated,
     }
 
     if question:
@@ -306,7 +349,6 @@ def get_next_question(assessment_id: int, user_id: int) -> dict:
             "dificuldade": question.dificuldade,
         }
     else:
-        # Dados para geração via IA
         result["generation_params"] = {
             "area": decision.area,
             "materia": decision.subject_name,

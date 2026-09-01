@@ -111,6 +111,42 @@
             <p class="text-muted">Nenhuma tentativa registrada ainda.</p>
             {% endif %}
 
+            {% if explanation %}
+            <div class="card border-info mt-4">
+                <div class="card-header bg-info bg-opacity-10">
+                    <h5 class="mb-0 text-info"><i class="bi bi-lightbulb"></i> Explicação Personalizada</h5>
+                </div>
+                <div class="card-body">
+                    <p class="fw-semibold">{{ explanation.summary }}</p>
+                    {% if explanation.concept %}
+                    <div class="mb-2">
+                        <strong>Conceito:</strong> {{ explanation.concept }}
+                    </div>
+                    {% endif %}
+                    {% if explanation.steps %}
+                    <div class="mb-2">
+                        <strong>Passo a passo:</strong>
+                        <ol class="mb-1 mt-1">
+                            {% for step in explanation.steps %}
+                            <li>{{ step }}</li>
+                            {% endfor %}
+                        </ol>
+                    </div>
+                    {% endif %}
+                    {% if explanation.common_mistake %}
+                    <div class="alert alert-warning mb-2">
+                        <strong>Erro comum:</strong> {{ explanation.common_mistake }}
+                    </div>
+                    {% endif %}
+                    {% if explanation.study_tip %}
+                    <div class="alert alert-success mb-0">
+                        <strong>Dica de estudo:</strong> {{ explanation.study_tip }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
             <div class="mt-3">
                 <a href="{{ url_for('questions.list_questions') }}" class="btn btn-secondary">Voltar</a>
             </div>

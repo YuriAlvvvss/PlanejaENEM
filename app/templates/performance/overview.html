@@ -59,6 +59,48 @@
 </div>
 {% endif %}
 
+{% if feedback %}
+<div class="card mb-4 border-primary">
+    <div class="card-header bg-primary bg-opacity-10">
+        <h5 class="mb-0 text-primary"><i class="bi bi-robot"></i> Feedback Personalizado</h5>
+    </div>
+    <div class="card-body">
+        <p class="mb-3">{{ feedback.summary }}</p>
+        {% if feedback.strengths %}
+        <div class="mb-2">
+            <strong class="text-success">Pontos fortes:</strong>
+            <ul class="mb-1 mt-1">
+                {% for s in feedback.strengths %}
+                <li>{{ s }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        {% if feedback.weaknesses %}
+        <div class="mb-2">
+            <strong class="text-warning">Pontos de atenção:</strong>
+            <ul class="mb-1 mt-1">
+                {% for w in feedback.weaknesses %}
+                <li>{{ w }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        {% if feedback.advice %}
+        <div class="mb-2">
+            <strong>Conselho:</strong>
+            <p class="mb-0">{{ feedback.advice }}</p>
+        </div>
+        {% endif %}
+        {% if feedback.next_step %}
+        <div class="alert alert-info mb-0 mt-2">
+            <strong>Próximo passo:</strong> {{ feedback.next_step }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
 {% if subject_stats %}
 <div class="chart-grid">
     <section class="chart-card">

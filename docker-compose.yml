@@ -3,10 +3,8 @@ services:
     build: .
     ports:
       - "5000:5000"
-    environment:
-      - FLASK_APP=run.py
-      - FLASK_ENV=development
-      - DATABASE_URL=sqlite:////app/instance/planejaenem.db
+    env_file:
+      - .env
     volumes:
       - ./instance:/app/instance
     restart: unless-stopped

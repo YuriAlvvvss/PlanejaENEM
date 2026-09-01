@@ -7,7 +7,79 @@
         <div class="eyebrow">Avaliação</div>
         <h2>Questões</h2>
     </div>
-    <a href="{{ url_for('questions.create_question_view') }}" class="btn btn-primary">+ Nova Questão</a>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#aiGenerateModal">
+            <i class="bi bi-robot"></i> Gerar com IA
+        </button>
+        <a href="{{ url_for('questions.create_question_view') }}" class="btn btn-primary">+ Nova Questão</a>
+    </div>
+</div>
+
+<div class="modal fade" id="aiGenerateModal" tabindex="-1" aria-labelledby="aiGenerateModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="aiGenerateModalLabel"><i class="bi bi-robot"></i> Gerar Questões com IA</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Matéria</label>
+                    <select id="aiSubject" class="form-select">
+                        <option value="">Selecione uma matéria</option>
+                        {% for subject in subjects %}
+                        <option value="{{ subject.id }}">{{ subject.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Assunto (opcional)</label>
+                    <select id="aiTopic" class="form-select">
+                        <option value="">Todos</option>
+                        {% for topic in topics %}
+                        <option value="{{ topic.id }}">{{ topic.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Dificuldade</label>
+                    <select id="aiDifficulty" class="form-select">
+                        <option value="1">1 - Fácil</option>
+                        <option value="2">2 - Médio-fácil</option>
+                        <option value="3" selected>3 - Médio</option>
+                        <option value="4">4 - Médio-difícil</option>
+                        <option value="5">5 - Difícil</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Quantidade</label>
+                    <select id="aiQuantity" class="form-select">
+                        <option value="1">1 questão</option>
+                        <option value="3">3 questões</option>
+                        <option value="5">5 questões</option>
+                    </select>
+                </div>
+                <div id="aiError" class="alert alert-danger d-none"></div>
+                <div id="aiLoading" class="text-center d-none">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Gerando...</span>
+                    </div>
+                    <p class="mt-2 mb-0">Gerando questões com IA...</p>
+                </div>
+                <div id="aiResult" class="d-none">
+                    <div class="alert alert-success">
+                        <span id="aiResultCount"></span> questão(ões) gerada(s) com sucesso!
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-success" id="aiGenerateBtn" onclick="generateWithAI()">
+                    <i class="bi bi-robot"></i> Gerar
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="card mb-4">
@@ -80,4 +152,77 @@
     <p class="text-muted mb-0">Crie questões ou ajuste os filtros.</p>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('aiSubject').addEventListener('change', function() {
+    var subjectId = this.value;
+    var topicSelect = document.getElementById('aiTopic');
+    topicSelect.innerHTML = '<option value="">Todos</option>';
+    if (!subjectId) return;
+    {% for topic in topics %}
+    if ({{ topic.subject_id }} == parseInt(subjectId)) {
+        var opt = document.createElement('option');
+        opt.value = '{{ topic.id }}';
+        opt.textContent = '{{ topic.nome }}';
+        topicSelect.appendChild(opt);
+    }
+    {% endfor %}
+});
+
+function generateWithAI() {
+    var subjectId = document.getElementById('aiSubject').value;
+    var topicId = document.getElementById('aiTopic').value;
+    var difficulty = document.getElementById('aiDifficulty').value;
+    var quantity = document.getElementById('aiQuantity').value;
+
+    if (!subjectId) {
+        document.getElementById('aiError').textContent = 'Selecione uma matéria.';
+        document.getElementById('aiError').classList.remove('d-none');
+        return;
+    }
+
+    document.getElementById('aiError').classList.add('d-none');
+    document.getElementById('aiResult').classList.add('d-none');
+    document.getElementById('aiLoading').classList.remove('d-none');
+    document.getElementById('aiGenerateBtn').disabled = true;
+
+    var payload = {
+        subject_id: parseInt(subjectId),
+        topic_id: topicId ? parseInt(topicId) : null,
+        dificuldade: parseInt(difficulty),
+        quantidade: parseInt(quantity)
+    };
+
+    fetch('{{ url_for("questions.generate_question") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        document.getElementById('aiLoading').classList.add('d-none');
+        document.getElementById('aiGenerateBtn').disabled = false;
+
+        if (data.success) {
+            document.getElementById('aiResultCount').textContent = data.count;
+            document.getElementById('aiResult').classList.remove('d-none');
+            setTimeout(function() { location.reload(); }, 1500);
+        } else {
+            document.getElementById('aiError').textContent = data.error || 'Erro ao gerar questões.';
+            document.getElementById('aiError').classList.remove('d-none');
+        }
+    })
+    .catch(function(err) {
+        document.getElementById('aiLoading').classList.add('d-none');
+        document.getElementById('aiGenerateBtn').disabled = false;
+        document.getElementById('aiError').textContent = 'Erro de conexão.';
+        document.getElementById('aiError').classList.remove('d-none');
+    });
+}
+</script>
 {% endblock %}

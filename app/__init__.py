@@ -234,10 +234,20 @@ def create_app(config_name=None):
     limiter.init_app(app)
 
     from app.ai import AIClient, UsageTracker, load_ai_config
+    from app.ai.question_generator import QuestionGenerator
+    from app.ai.explanation_generator import ExplanationGenerator
+    from app.ai.feedback_generator import FeedbackGenerator
+    from app.ai.review_generator import ReviewGenerator
+
     ai_config = load_ai_config()
     ai_tracker = UsageTracker()
     app.ai_client = AIClient(ai_config, ai_tracker)
     app.ai_tracker = ai_tracker
+
+    app.question_generator = QuestionGenerator(app.ai_client)
+    app.explanation_generator = ExplanationGenerator(app.ai_client)
+    app.feedback_generator = FeedbackGenerator(app.ai_client)
+    app.review_generator = ReviewGenerator(app.ai_client)
 
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Faça login para acessar esta página."

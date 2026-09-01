@@ -10,7 +10,7 @@ Responsável por:
 
 from datetime import date, datetime
 
-from flask import flash, redirect, render_template, request, url_for
+from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.authz import get_user_plan, get_user_session, user_owns_subject
@@ -199,3 +199,70 @@ def diagnostics():
     """Exibe diagnóstico do desempenho do aluno."""
     diagnostics_data = get_diagnostics(current_user.id)
     return render_template("planner/diagnostics.html", diagnostics=diagnostics_data)
+
+
+@planner_bp.route("/review", methods=["POST"])
+@login_required
+def generate_review():
+    """Gera revisão personalizada para um tópico via IA."""
+    import logging
+    logger = logging.getLogger(__name__)
+
+    data = request.get_json(silent=True) or {}
+    topic_id = data.get("topic_id")
+    duration_minutes = data.get("duration_minutes", 10)
+
+    if not topic_id:
+        return jsonify({"success": False, "error": "topic_id é obrigatório"}), 400
+
+    from app.performance.models import KnowledgeState
+    from app.models import Topic
+
+    topic = Topic.query.filter_by(id=topic_id, user_id=current_user.id).first()
+    if not topic:
+        return jsonify({"success": False, "error": "Tópico não encontrado"}), 404
+
+    ks = KnowledgeState.query.filter_by(
+        user_id=current_user.id, topic_id=topic_id
+    ).first()
+
+    mastery = ks.mastery_score if ks else 0.0
+    confidence = ks.confidence_score if ks else 0.0
+
+    weak_concepts = []
+    recent_errors = []
+    if ks:
+        if ks.mastery_score < 0.5:
+            weak_concepts.append(topic.nome)
+        if ks.trend == "declining":
+            recent_errors.append(f"Tendência em declínio em {topic.nome}")
+
+    try:
+        from app.ai.review_generator import ReviewInput
+
+        inp = ReviewInput(
+            materia=topic.subject.nome if topic.subject else "",
+            assunto=topic.nome,
+            mastery=mastery,
+            confidence=confidence,
+            weak_concepts=weak_concepts,
+            recent_errors=recent_errors,
+            duration_minutes=int(duration_minutes),
+        )
+        review = current_app.review_generator.generate(inp)
+
+        return jsonify({
+            "success": True,
+            "review": {
+                "title": review.title,
+                "summary": review.summary,
+                "key_concepts": review.key_concepts,
+                "worked_example": review.worked_example,
+                "common_mistakes": review.common_mistakes,
+                "quick_check": review.quick_check,
+            },
+        }), 200
+
+    except Exception as exc:
+        logger.warning("Erro ao gerar revisão: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 500

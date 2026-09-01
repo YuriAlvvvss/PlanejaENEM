@@ -1,4 +1,6 @@
-from flask import flash, redirect, render_template, request, url_for
+import logging
+
+from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.authz import get_user_question, get_user_subject, get_user_topic
@@ -15,6 +17,8 @@ from app.questions.services import (
     get_user_topics,
     record_attempt,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @questions_bp.route("/topics")
@@ -150,6 +154,7 @@ def view_question(id):
         form=form,
         attempt_count=attempt_count,
         recent_attempts=recent_attempts,
+        explanation=None,
     )
 
 
@@ -166,6 +171,47 @@ def answer_question(id):
             resposta=form.resposta.data,
             tempo_segundos=form.tempo_segundos.data,
         )
+
+        explanation = None
+        try:
+            from app.ai.explanation_generator import ExplanationInput
+
+            mastery = None
+            trend = None
+            if question.topic_id:
+                from app.performance.models import KnowledgeState
+                ks = KnowledgeState.query.filter_by(
+                    user_id=current_user.id, topic_id=question.topic_id
+                ).first()
+                if ks:
+                    mastery = ks.mastery_score
+                    trend = ks.trend
+
+            inp = ExplanationInput(
+                question_id=str(question.id),
+                statement=question.enunciado,
+                alternatives={
+                    "a": question.alternativa_a,
+                    "b": question.alternativa_b,
+                    "c": question.alternativa_c,
+                    "d": question.alternativa_d,
+                    "e": question.alternativa_e,
+                },
+                student_answer=attempt.resposta,
+                correct_answer=question.resposta_correta,
+                materia=question.subject.nome if question.subject else "",
+                assunto=question.topic.nome if question.topic else "Geral",
+                dificuldade=question.dificuldade,
+                mastery=mastery,
+                trend=trend,
+            )
+            explanation = current_app.explanation_generator.generate(inp)
+        except Exception as exc:
+            logger.warning("Erro ao gerar explicação: %s", exc)
+
+        attempt_count = get_user_attempt_count(current_user.id, id)
+        recent_attempts = get_recent_attempts(current_user.id, limit=5)
+
         if attempt.correta:
             flash("Resposta correta!", "success")
         else:
@@ -178,7 +224,14 @@ def answer_question(id):
             except Exception:
                 pass
 
-        return redirect(url_for("questions.view_question", id=id))
+        return render_template(
+            "questions/view.html",
+            question=question,
+            form=AnswerForm(),
+            attempt_count=attempt_count,
+            recent_attempts=recent_attempts,
+            explanation=explanation,
+        )
 
     flash("Formulário inválido.", "warning")
     return redirect(url_for("questions.view_question", id=id))
@@ -224,3 +277,85 @@ def delete_question(id):
         flash("Questão excluída!", "success")
         return redirect(url_for("questions.list_questions"))
     return render_template("questions/confirm_delete_question.html", question=question)
+
+
+@questions_bp.route("/generate", methods=["POST"])
+@login_required
+def generate_question():
+    data = request.get_json(silent=True) or {}
+    subject_id = data.get("subject_id")
+    topic_id = data.get("topic_id")
+    dificuldade = data.get("dificuldade", 3)
+    quantidade = data.get("quantidade", 1)
+
+    if not subject_id:
+        return jsonify({"success": False, "error": "subject_id é obrigatório"}), 400
+
+    subject = Subject.query.filter_by(id=subject_id, user_id=current_user.id).first()
+    if not subject:
+        return jsonify({"success": False, "error": "Matéria não encontrada"}), 404
+
+    topic = None
+    if topic_id:
+        topic = Topic.query.filter_by(id=topic_id, user_id=current_user.id).first()
+
+    topic_name = topic.nome if topic else "Geral"
+    area = subject.area or "outro"
+
+    try:
+        gen = current_app.question_generator
+        if not gen.enabled:
+            return jsonify({"success": False, "error": "IA não está disponível"}), 503
+
+        generated = gen.generate(
+            user_id=str(current_user.id),
+            area=area,
+            materia=subject.nome,
+            assunto=topic_name,
+            dificuldade=int(dificuldade),
+            quantidade=int(quantidade),
+        )
+
+        created = []
+        for g in generated:
+            db_dict = g.to_db_dict()
+            new_q = Question(
+                enunciado=db_dict["enunciado"],
+                alternativa_a=db_dict["alternativa_a"],
+                alternativa_b=db_dict["alternativa_b"],
+                alternativa_c=db_dict["alternativa_c"],
+                alternativa_d=db_dict["alternativa_d"],
+                alternativa_e=db_dict["alternativa_e"],
+                resposta_correta=db_dict["resposta_correta"],
+                subject_id=subject.id,
+                topic_id=topic.id if topic else None,
+                user_id=current_user.id,
+                dificuldade=db_dict["dificuldade"],
+                fonte=db_dict.get("fonte", "ai"),
+            )
+            db.session.add(new_q)
+            db.session.flush()
+            created.append({
+                "id": new_q.id,
+                "enunciado": new_q.enunciado,
+                "alternativa_a": new_q.alternativa_a,
+                "alternativa_b": new_q.alternativa_b,
+                "alternativa_c": new_q.alternativa_c,
+                "alternativa_d": new_q.alternativa_d,
+                "alternativa_e": new_q.alternativa_e,
+                "resposta_correta": new_q.resposta_correta,
+                "dificuldade": new_q.dificuldade,
+            })
+
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "questions": created,
+            "count": len(created),
+        }), 201
+
+    except Exception as exc:
+        db.session.rollback()
+        logger.warning("Erro ao gerar questões via IA: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 500
