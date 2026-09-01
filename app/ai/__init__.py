@@ -21,6 +21,7 @@ Uso:
 
 from app.ai.client import AIClient
 from app.ai.config import AIConfig, load_ai_config
+from app.ai.cost_estimator import estimate_cost, estimate_monthly_cost
 from app.ai.exceptions import (
     AIDisabledError,
     AIConfigurationError,
@@ -30,12 +31,44 @@ from app.ai.exceptions import (
     AIValidationError,
     AITimeoutError,
 )
+from app.ai.explanation_generator import (
+    ExplanationGenerator,
+    ExplanationInput,
+    ExplanationOutput,
+)
+from app.ai.feedback_generator import (
+    FeedbackGenerator,
+    FeedbackOutput,
+    PerformanceData,
+)
+from app.ai.models import AIUsage
+from app.ai.output_validator import (
+    OutputValidationResult,
+    sanitize_output,
+    validate_explanation_output,
+    validate_feedback_output,
+    validate_question_output,
+    validate_review_output,
+    validate_text_output,
+)
 from app.ai.question_generator import (
     GeneratedQuestion,
     QuestionGenerator,
     QuestionGeneratorConfig,
 )
 from app.ai.prompts import PROMPT_VERSION
+from app.ai.rate_limiter import AIRateLimiter
+from app.ai.review_generator import (
+    ReviewGenerator,
+    ReviewInput,
+    ReviewOutput,
+)
+from app.ai.sanitizer import (
+    build_safe_prompt,
+    get_injection_details,
+    has_injection_attempt,
+    sanitize_user_content,
+)
 from app.ai.schemas import (
     ChatRequest,
     ChatResponse,
@@ -56,19 +89,43 @@ __all__ = [
     "AIRateLimitError",
     "AIValidationError",
     "AITimeoutError",
+    "AIUsage",
+    "AIRateLimiter",
     "ChatRequest",
     "ChatResponse",
+    "ExplanationGenerator",
+    "ExplanationInput",
+    "ExplanationOutput",
+    "FeedbackGenerator",
+    "FeedbackOutput",
     "GeneratedQuestion",
     "Message",
+    "OutputValidationResult",
     "PROMPT_VERSION",
+    "PerformanceData",
     "QuestionGenerator",
     "QuestionGeneratorConfig",
+    "ReviewGenerator",
+    "ReviewInput",
+    "ReviewOutput",
     "StructuredChatResponse",
     "UsageInfo",
     "UsageTracker",
     "ValidationResult",
+    "build_safe_prompt",
+    "estimate_cost",
+    "estimate_monthly_cost",
+    "get_injection_details",
+    "has_injection_attempt",
     "load_ai_config",
+    "sanitize_output",
     "sanitize_question",
+    "sanitize_user_content",
+    "validate_explanation_output",
+    "validate_feedback_output",
     "validate_question",
     "validate_question_batch",
+    "validate_question_output",
+    "validate_review_output",
+    "validate_text_output",
 ]

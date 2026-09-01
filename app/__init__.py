@@ -198,6 +198,28 @@ def migrate_legacy_database(app):
             connection.execute("CREATE INDEX idx_ks_user_subject ON knowledge_states(user_id, subject_id)")
             connection.execute("CREATE INDEX idx_ks_user_topic ON knowledge_states(user_id, topic_id)")
             connection.execute("CREATE UNIQUE INDEX uq_knowledge_state_user_topic ON knowledge_states(user_id, topic_id)")
+        if "ai_usage" not in tables:
+            connection.execute("""
+                CREATE TABLE ai_usage (
+                    id INTEGER PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id),
+                    feature VARCHAR(50) NOT NULL,
+                    model VARCHAR(100) NOT NULL,
+                    prompt_version VARCHAR(20) NOT NULL DEFAULT '1.0',
+                    input_tokens INTEGER NOT NULL DEFAULT 0,
+                    output_tokens INTEGER NOT NULL DEFAULT 0,
+                    total_tokens INTEGER NOT NULL DEFAULT 0,
+                    latency_ms REAL NOT NULL DEFAULT 0.0,
+                    estimated_cost REAL NOT NULL DEFAULT 0.0,
+                    status VARCHAR(20) NOT NULL DEFAULT 'success',
+                    error_type VARCHAR(50),
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            connection.execute("CREATE INDEX idx_ai_usage_user_id ON ai_usage(user_id)")
+            connection.execute("CREATE INDEX idx_ai_usage_user_feature_created ON ai_usage(user_id, feature, created_at)")
+            connection.execute("CREATE INDEX idx_ai_usage_feature_created ON ai_usage(feature, created_at)")
+            connection.execute("CREATE INDEX idx_ai_usage_created_at ON ai_usage(created_at)")
         connection.commit()
 
 

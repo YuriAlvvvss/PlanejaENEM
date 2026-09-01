@@ -16,6 +16,7 @@ import time
 import httpx
 
 from app.ai.config import AIConfig
+from app.ai.cost_estimator import estimate_cost
 from app.ai.exceptions import (
     AIDisabledError,
     AIConfigurationError,
@@ -46,9 +47,15 @@ class AIClient:
     Uma instância por aplicação (singleton via create_app).
     """
 
-    def __init__(self, config: AIConfig, tracker: UsageTracker) -> None:
+    def __init__(
+        self,
+        config: AIConfig,
+        tracker: UsageTracker,
+        rate_limiter=None,
+    ) -> None:
         self._config = config
         self._tracker = tracker
+        self._rate_limiter = rate_limiter
         self._http: httpx.Client | None = None
 
         if self._config.enabled:
@@ -312,6 +319,13 @@ class AIClient:
         usage = UsageInfo.from_dict(data.get("usage"))
         finish_reason = choices[0].get("finish_reason", "stop") if choices else "stop"
 
+        # Calcula custo estimado
+        cost = estimate_cost(
+            usage.prompt_tokens,
+            usage.completion_tokens,
+            self._config,
+        )
+
         response = ChatResponse(
             content=content,
             model=model,
@@ -328,6 +342,7 @@ class AIClient:
             total_tokens=usage.total_tokens,
             latency_ms=latency_ms,
             status="success",
+            estimated_cost=cost,
         )
 
         return response

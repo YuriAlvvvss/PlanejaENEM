@@ -28,12 +28,27 @@ class AIConfig:
     max_questions_per_request: int = 5
     max_questions_per_hour: int = 20
 
+    # Custos estimados por 1K tokens (OpenRouter gpt-4o-mini)
+    cost_per_1k_input_tokens: float = 0.00015
+    cost_per_1k_output_tokens: float = 0.0006
+
+    # Limites por feature (por hora)
+    max_explanations_per_hour: int = 30
+    max_reviews_per_hour: int = 20
+    max_feedback_per_hour: int = 20
+
+    # Orçamento
+    daily_budget_usd: float = 5.00
+    monthly_budget_usd: float = 100.00
+
     def __repr__(self) -> str:
         """Repr seguro: nunca expõe api_key."""
         return (
             f"AIConfig(enabled={self.enabled!r}, model={self.model!r}, "
             f"base_url={self.base_url!r}, timeout={self.timeout!r}, "
             f"max_retries={self.max_retries!r}, max_tokens={self.max_tokens!r}, "
+            f"daily_budget_usd={self.daily_budget_usd!r}, "
+            f"monthly_budget_usd={self.monthly_budget_usd!r}, "
             f"api_key={'***' if self.api_key else ''})"
         )
 
@@ -82,4 +97,25 @@ def load_ai_config() -> AIConfig:
         max_tokens=_parse_int(os.environ.get("AI_MAX_TOKENS"), default=2048),
         max_questions_per_request=_parse_int(os.environ.get("AI_MAX_QUESTIONS_PER_REQUEST"), default=5),
         max_questions_per_hour=_parse_int(os.environ.get("AI_MAX_QUESTIONS_PER_HOUR"), default=20),
+        cost_per_1k_input_tokens=_parse_float(
+            os.environ.get("AI_COST_PER_1K_INPUT_TOKENS"), default=0.00015
+        ),
+        cost_per_1k_output_tokens=_parse_float(
+            os.environ.get("AI_COST_PER_1K_OUTPUT_TOKENS"), default=0.0006
+        ),
+        max_explanations_per_hour=_parse_int(
+            os.environ.get("AI_MAX_EXPLANATIONS_PER_HOUR"), default=30
+        ),
+        max_reviews_per_hour=_parse_int(
+            os.environ.get("AI_MAX_REVIEWS_PER_HOUR"), default=20
+        ),
+        max_feedback_per_hour=_parse_int(
+            os.environ.get("AI_MAX_FEEDBACK_PER_HOUR"), default=20
+        ),
+        daily_budget_usd=_parse_float(
+            os.environ.get("AI_DAILY_BUDGET_USD"), default=5.00
+        ),
+        monthly_budget_usd=_parse_float(
+            os.environ.get("AI_MONTHLY_BUDGET_USD"), default=100.00
+        ),
     )
