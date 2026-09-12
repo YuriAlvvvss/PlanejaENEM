@@ -114,6 +114,27 @@ def migrate_legacy_database(app):
                 "SELECT name FROM sqlite_master WHERE type='table'"
             ).fetchall()
         }
+        if "question_attempts" in tables:
+            duplicate_attempts = connection.execute(
+                """
+                SELECT 1
+                FROM question_attempts
+                GROUP BY user_id, question_id
+                HAVING COUNT(*) > 1
+                LIMIT 1
+                """
+            ).fetchone()
+            if duplicate_attempts is None:
+                connection.execute(
+                    """
+                    CREATE UNIQUE INDEX IF NOT EXISTS uq_attempt_user_question
+                    ON question_attempts(user_id, question_id)
+                    """
+                )
+            else:
+                app.logger.warning(
+                    "Índice de tentativa única não criado: existem tentativas duplicadas legadas."
+                )
         if "subjects" in tables:
             _add_missing_column(
                 connection, "subjects", "prioridade", "prioridade INTEGER NOT NULL DEFAULT 3"

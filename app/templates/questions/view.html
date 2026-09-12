@@ -30,24 +30,39 @@
                 {% endif %}
             </div>
 
-            <div class="card bg-light mb-4">
+            <div class="question-prompt mb-4">
                 <div class="card-body">
                     <p class="mb-0" style="white-space: pre-wrap;">{{ question.enunciado }}</p>
                 </div>
             </div>
 
-            <form method="POST" action="{{ url_for('questions.answer_question', id=question.id) }}">
+            {% if attempt %}
+            <div class="answer-result {% if attempt.correta %}answer-result--correct{% else %}answer-result--wrong{% endif %}" role="status">
+                <strong>{% if attempt.correta %}Você acertou!{% else %}Você errou.{% endif %}</strong>
+                <span>Sua resposta: {{ attempt.resposta }}. Gabarito: {{ question.resposta_correta }}.</span>
+                <span>Tempo de resposta: {{ attempt.tempo_segundos if attempt.tempo_segundos is not none else "não informado" }}{% if attempt.tempo_segundos is not none %}s{% endif %}</span>
+            </div>
+            {% else %}
+            <div class="answer-warning" role="note">
+                <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+                <span>Leia com atenção: você tem apenas uma tentativa para responder esta questão.</span>
+            </div>
+
+            <form method="POST" action="{{ url_for('questions.answer_question', id=question.id) }}" data-question-answer-form>
                 {{ form.hidden_tag() }}
+                <input type="hidden" name="tempo_segundos" id="answerTime" value="0">
                 <div class="mb-4">
-                    <label class="form-label fw-bold">Alternativas</label>
-                    <div class="d-flex flex-column gap-2">
+                    <div class="answer-heading">
+                        <label class="form-label fw-bold mb-0">Alternativas</label>
+                        <span class="answer-timer" data-answer-timer aria-live="off">00:00</span>
+                    </div>
+                    <div class="answer-options">
                         {% for alt_letter, alt_text in [('A', question.alternativa_a), ('B', question.alternativa_b), ('C', question.alternativa_c), ('D', question.alternativa_d), ('E', question.alternativa_e)] %}
-                        <div class="form-check answer-option">
-                            {{ form.resposta(class="form-check-input", value=alt_letter, id="alt_" + alt_letter) }}
-                            <label class="form-check-label" for="alt_{{ alt_letter }}">
-                                <strong>{{ alt_letter }})</strong> {{ alt_text }}
-                            </label>
-                        </div>
+                        <label class="answer-option" for="answer_{{ alt_letter }}">
+                            <input class="answer-option__input" type="radio" name="resposta" value="{{ alt_letter }}" id="answer_{{ alt_letter }}"{% if form.resposta.data == alt_letter %} checked{% endif %}>
+                            <span class="answer-option__letter">{{ alt_letter }}</span>
+                            <span class="answer-option__text">{{ alt_text }}</span>
+                        </label>
                         {% endfor %}
                     </div>
                     {% if form.resposta.errors %}
@@ -57,56 +72,8 @@
                     {% endif %}
                 </div>
 
-                <div class="mb-4">
-                    <label class="form-label">{{ form.tempo_segundos.label }}</label>
-                    {{ form.tempo_segundos(class="form-control", placeholder="Opcional: tempo em segundos", style="max-width: 300px;") }}
-                    {% if form.tempo_segundos.errors %}
-                    <div class="invalid-feedback d-block">
-                        {% for error in form.tempo_segundos.errors %}<i class="bi bi-exclamation-circle"></i> {{ error }}<br/>{% endfor %}
-                    </div>
-                    {% endif %}
-                </div>
-
-                {{ form.submit(class="btn btn-primary btn-lg") }}
+                {{ form.submit(class="btn btn-primary btn-lg", value="Enviar resposta") }}
             </form>
-
-            <hr class="my-4">
-
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="mb-0">Histórico de Tentativas</h5>
-                <span class="badge bg-secondary">{{ attempt_count }} tentativa(s)</span>
-            </div>
-            {% if recent_attempts %}
-            <div class="table-responsive">
-                <table class="table table-sm">
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Sua Resposta</th>
-                            <th>Correta</th>
-                            <th>Tempo</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for att in recent_attempts %}
-                        <tr>
-                            <td>{{ att.attempted_at.strftime('%d/%m %H:%M') }}</td>
-                            <td><span class="badge bg-secondary">{{ att.resposta }}</span></td>
-                            <td>
-                                {% if att.correta %}
-                                <span class="badge bg-success">Acertou</span>
-                                {% else %}
-                                <span class="badge bg-danger">Errou</span>
-                                {% endif %}
-                            </td>
-                            <td>{% if att.tempo_segundos is not none %}{{ att.tempo_segundos }}s{% else %}-{% endif %}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <p class="text-muted">Nenhuma tentativa registrada ainda.</p>
             {% endif %}
 
             {% if explanation %}
@@ -152,18 +119,7 @@
     </div>
 </div>
 
-<style>
-.answer-option {
-    padding: 10px 14px;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    transition: background 0.15s;
-}
-.answer-option:hover {
-    background: #f8f9fa;
-}
-.answer-option input:checked + label {
-    font-weight: 600;
-}
-</style>
+{% if not attempt %}
+<script src="{{ url_for('static', filename='question-answer.js') }}"></script>
+{% endif %}
 {% endblock %}

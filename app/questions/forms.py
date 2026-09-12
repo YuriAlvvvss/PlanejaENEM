@@ -64,6 +64,6 @@ class AnswerForm(FlaskForm):
     )
     tempo_segundos = IntegerField(
         "Tempo (segundos)",
-        validators=[Optional(), NumberRange(min=0, max=7200, message="Tempo entre 0 e 7200 segundos.")],
+        validators=[Optional(), NumberRange(min=0, max=86400, message="Tempo entre 0 e 86400 segundos.")],
     )
     submit = SubmitField("Confirmar Resposta")
