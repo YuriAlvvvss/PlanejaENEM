@@ -36,7 +36,7 @@
                     <select id="aiTopic" class="form-select">
                         <option value="">Todos</option>
                         {% for topic in topics %}
-                        <option value="{{ topic.id }}" data-subject-id="{{ topic.subject_id }}">{{ topic.nome }}</option>
+                        <option value="{{ topic.id }}">{{ topic.nome }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -63,13 +63,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                <button
-                    type="button"
-                    class="btn btn-success"
-                    id="aiGenerateBtn"
-                    data-endpoint="{{ url_for('questions.generate_question') }}"
-                    data-csrf-token="{{ csrf_token() }}"
-                >
+                <button type="button" class="btn btn-success" id="aiGenerateBtn" onclick="generateWithAI()">
                     <i class="bi bi-robot"></i> Gerar
                 </button>
             </div>
@@ -82,7 +76,7 @@
         <form method="GET" class="row g-2 align-items-end">
             <div class="col-md-4">
                 <label class="form-label small">Matéria</label>
-                <select name="subject" class="form-select form-select-sm" data-auto-submit>
+                <select name="subject" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="">Todas</option>
                     {% for subject in subjects %}
                     <option value="{{ subject.id }}" {% if filter_subject == subject.id %}selected{% endif %}>{{ subject.nome }}</option>
@@ -91,7 +85,7 @@
             </div>
             <div class="col-md-4">
                 <label class="form-label small">Assunto</label>
-                <select name="topic" class="form-select form-select-sm" data-auto-submit>
+                <select name="topic" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="">Todos</option>
                     {% for topic in topics %}
                     <option value="{{ topic.id }}" {% if filter_topic == topic.id %}selected{% endif %}>{{ topic.nome }}</option>
@@ -103,55 +97,6 @@
 </div>
 
 {% if questions %}
-<div class="d-flex gap-2 mb-3">
-    <span class="badge bg-warning text-dark">{{ pending_questions|length }} pendente(s)</span>
-    <span class="badge bg-secondary">{{ answered_questions|length }} concluída(s)</span>
-</div>
-
-<h5 class="mb-2">Pendentes ({{ pending_questions|length }})</h5>
-{% if pending_questions %}
-<div class="table-responsive table-modern mb-4">
-    <table class="table table-hover mb-0">
-        <thead>
-            <tr>
-                <th>Enunciado</th>
-                <th>Matéria</th>
-                <th>Assunto</th>
-                <th>Status</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for q in pending_questions %}
-            {% set att = attempt_map.get(q.id) if attempt_map else None %}
-            <tr>
-                <td class="fw-semibold">{{ q.enunciado[:80] }}{% if q.enunciado|length > 80 %}...{% endif %}</td>
-                <td>
-                    <span class="status-pill" style="background-color: {{ q.subject.cor }}22; color: {{ q.subject.cor }};">
-                        {{ q.subject.nome }}
-                    </span>
-                </td>
-                <td>{{ q.topic.nome if q.topic else "-" }}</td>
-                <td>
-                    <span class="badge bg-warning text-dark">Pendente</span>
-                </td>
-                <td>
-                    <div class="btn-group btn-group-sm">
-                        <a href="{{ url_for('questions.view_question', id=q.id) }}" class="btn btn-outline-primary">Responder</a>
-                        <a href="{{ url_for('questions.delete_question', id=q.id) }}" class="btn btn-outline-danger">Excluir</a>
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% else %}
-<p class="text-muted">Nenhuma questão pendente. 🎉</p>
-{% endif %}
-
-<h5 class="mb-2 mt-4">Concluídas ({{ answered_questions|length }})</h5>
-{% if answered_questions %}
 <div class="table-responsive table-modern">
     <table class="table table-hover mb-0">
         <thead>
@@ -159,13 +104,12 @@
                 <th>Enunciado</th>
                 <th>Matéria</th>
                 <th>Assunto</th>
-                <th>Status</th>
+                <th>Resposta</th>
                 <th>Ações</th>
             </tr>
         </thead>
         <tbody>
-            {% for q in answered_questions %}
-            {% set att = attempt_map.get(q.id) if attempt_map else None %}
+            {% for q in questions %}
             <tr>
                 <td class="fw-semibold">{{ q.enunciado[:80] }}{% if q.enunciado|length > 80 %}...{% endif %}</td>
                 <td>
@@ -174,16 +118,10 @@
                     </span>
                 </td>
                 <td>{{ q.topic.nome if q.topic else "-" }}</td>
-                <td>
-                    {% if att and att.correta %}
-                    <span class="badge bg-success">Acertou</span>
-                    {% else %}
-                    <span class="badge bg-danger">Errou</span>
-                    {% endif %}
-                </td>
+                <td><span class="badge bg-success">{{ q.resposta_correta }}</span></td>
                 <td>
                     <div class="btn-group btn-group-sm">
-                        <a href="{{ url_for('questions.view_question', id=q.id) }}" class="btn btn-outline-secondary">Ver resultado</a>
+                        <a href="{{ url_for('questions.view_question', id=q.id) }}" class="btn btn-outline-primary">Ver</a>
                         <a href="{{ url_for('questions.delete_question', id=q.id) }}" class="btn btn-outline-danger">Excluir</a>
                     </div>
                 </td>
@@ -192,9 +130,6 @@
         </tbody>
     </table>
 </div>
-{% else %}
-<p class="text-muted">Você ainda não concluiu nenhuma questão.</p>
-{% endif %}
 {% else %}
 <div class="empty-state text-center">
     <h5 class="text-muted">Nenhuma questão encontrada</h5>
@@ -204,5 +139,72 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='questions.js') }}"></script>
+<script>
+document.getElementById('aiSubject').addEventListener('change', function() {
+    var subjectId = this.value;
+    var topicSelect = document.getElementById('aiTopic');
+    topicSelect.innerHTML = '<option value="">Todos</option>';
+    if (!subjectId) return;
+    {% for topic in topics %}
+    if ({{ topic.subject_id }} == parseInt(subjectId)) {
+        var opt = document.createElement('option');
+        opt.value = '{{ topic.id }}';
+        opt.textContent = '{{ topic.nome }}';
+        topicSelect.appendChild(opt);
+    }
+    {% endfor %}
+});
+
+function generateWithAI() {
+    var subjectId = document.getElementById('aiSubject').value;
+    var topicId = document.getElementById('aiTopic').value;
+    var quantity = document.getElementById('aiQuantity').value;
+
+    if (!subjectId) {
+        document.getElementById('aiError').textContent = 'Selecione uma matéria.';
+        document.getElementById('aiError').classList.remove('d-none');
+        return;
+    }
+
+    document.getElementById('aiError').classList.add('d-none');
+    document.getElementById('aiResult').classList.add('d-none');
+    document.getElementById('aiLoading').classList.remove('d-none');
+    document.getElementById('aiGenerateBtn').disabled = true;
+
+    var payload = {
+        subject_id: parseInt(subjectId),
+        topic_id: topicId ? parseInt(topicId) : null,
+        quantidade: parseInt(quantity)
+    };
+
+    fetch('{{ url_for("questions.generate_question") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        document.getElementById('aiLoading').classList.add('d-none');
+        document.getElementById('aiGenerateBtn').disabled = false;
+
+        if (data.success) {
+            document.getElementById('aiResultCount').textContent = data.count;
+            document.getElementById('aiResult').classList.remove('d-none');
+            setTimeout(function() { location.reload(); }, 1500);
+        } else {
+            document.getElementById('aiError').textContent = data.error || 'Erro ao gerar questões.';
+            document.getElementById('aiError').classList.remove('d-none');
+        }
+    })
+    .catch(function(err) {
+        document.getElementById('aiLoading').classList.add('d-none');
+        document.getElementById('aiGenerateBtn').disabled = false;
+        document.getElementById('aiError').textContent = 'Erro de conexão.';
+        document.getElementById('aiError').classList.remove('d-none');
+    });
+}
+</script>
 {% endblock %}

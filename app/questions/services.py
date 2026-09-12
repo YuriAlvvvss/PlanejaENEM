@@ -78,12 +78,6 @@ def record_attempt(
     if question is None:
         raise ValueError("Questão não encontrada.")
 
-    existing_attempt = QuestionAttempt.query.filter_by(
-        user_id=user_id, question_id=question_id
-    ).first()
-    if existing_attempt is not None:
-        raise ValueError("Esta questão já foi respondida.")
-
     correta = resposta.upper() == question.resposta_correta.upper()
 
     attempt = QuestionAttempt(
@@ -100,22 +94,6 @@ def record_attempt(
 
 def get_user_attempt_count(user_id: int, question_id: int) -> int:
     return QuestionAttempt.query.filter_by(user_id=user_id, question_id=question_id).count()
-
-
-def get_user_attempt(user_id: int, question_id: int) -> Optional[QuestionAttempt]:
-    return QuestionAttempt.query.filter_by(
-        user_id=user_id, question_id=question_id
-    ).first()
-
-
-def get_attempts_map(user_id: int, question_ids: list) -> dict:
-    """Mapa question_id -> attempt do usuário em 1 query (evita N+1 na lista)."""
-    if not question_ids:
-        return {}
-    attempts = QuestionAttempt.query.filter_by(user_id=user_id).filter(
-        QuestionAttempt.question_id.in_(question_ids)
-    ).all()
-    return {a.question_id: a for a in attempts}
 
 
 def get_recent_attempts(user_id: int, limit: int = 10):

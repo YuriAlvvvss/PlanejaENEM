@@ -159,6 +159,45 @@
 </div>
 {% endif %}
 
+{% if difficulty_stats %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Desempenho por dificuldade</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Dificuldade</th>
+                    <th>Questões</th>
+                    <th>Acertos</th>
+                    <th>Erros</th>
+                    <th>Aproveitamento</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in difficulty_stats %}
+                <tr>
+                    <td><span class="badge bg-secondary">{{ stat.dificuldade }}/5</span></td>
+                    <td>{{ stat.total }}</td>
+                    <td class="text-success">{{ stat.correct }}</td>
+                    <td class="text-danger">{{ stat.wrong }}</td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="progress flex-grow-1" style="height: 8px; max-width: 120px;">
+                                <div class="progress-bar {% if stat.accuracy >= 70 %}bg-success{% elif stat.accuracy >= 40 %}bg-warning{% else %}bg-danger{% endif %}" style="width: {{ stat.accuracy }}%;"></div>
+                            </div>
+                            <strong>{{ stat.accuracy }}%</strong>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
 {% if topic_stats %}
 <div class="card mb-4">
     <div class="card-header">
