@@ -175,6 +175,13 @@ class TestLoadAIConfig:
             config = load_ai_config()
             assert config.model == "anthropic/claude-3"
 
+    def test_free_router_uses_stable_structured_model(self):
+        import os
+        with patch.dict(os.environ, {"OPENROUTER_MODEL": "openrouter/free"}, clear=False):
+            os.environ.pop("OPENROUTER_STRUCTURED_MODEL", None)
+            config = load_ai_config()
+            assert config.structured_model == "openai/gpt-4o-mini"
+
     def test_timeout_parsing(self):
         """AI_TIMEOUT deve ser parseado corretamente."""
         import os
@@ -483,6 +490,27 @@ class TestAIClientStructured:
         assert isinstance(response, StructuredChatResponse)
         assert response.data["answer"] == "4"
         assert response.data["confidence"] == 0.99
+
+    @pytest.mark.parametrize(
+        "content",
+        [
+            '```json\n{"answer": "4"}\n```',
+            'Aqui está o resultado:\n{"answer": "4"}',
+        ],
+    )
+    def test_structured_recupera_json_com_formato_extra(self, content):
+        config = AIConfig(enabled=True, api_key="test-key", model="test-model", max_retries=0)
+        client = AIClient(config, UsageTracker())
+        mock_http_response = MagicMock()
+        mock_http_response.status_code = 200
+        mock_http_response.json.return_value = _openrouter_response(content=content)
+
+        with patch.object(client._http, "post", return_value=mock_http_response):
+            response = client.chat_structured(
+                _simple_request(), expected_keys=["answer"], feature="structured_test"
+            )
+
+        assert response.data == {"answer": "4"}
 
     def test_structured_json_invalido(self):
         """chat_structured() com JSON inválido deve levantar AIValidationError."""

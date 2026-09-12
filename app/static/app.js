@@ -93,4 +93,64 @@ document.addEventListener("DOMContentLoaded", () => {
             localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
         });
     }
+
+    const recommendButton = document.querySelector("[data-task-recommend]");
+    const recommendationPanel = document.querySelector("[data-task-recommendation]");
+    const confirmButton = document.querySelector("[data-task-confirm]");
+    let currentRecommendation = null;
+    if (recommendButton && recommendationPanel) {
+        recommendButton.addEventListener("click", async () => {
+            recommendButton.disabled = true;
+            recommendButton.setAttribute("aria-busy", "true");
+            try {
+                const response = await fetch(recommendButton.dataset.endpoint, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": recommendButton.dataset.csrfToken,
+                    },
+                    body: JSON.stringify({ available_minutes: 60 }),
+                });
+                const payload = await response.json();
+                if (!response.ok || !payload.success) {
+                    throw new Error(payload.error || "Não foi possível gerar uma sugestão.");
+                }
+                const suggestion = payload.recommendation;
+                currentRecommendation = suggestion;
+                recommendationPanel.querySelector("[data-task-title]").textContent = suggestion.title;
+                recommendationPanel.querySelector("[data-task-description]").textContent = suggestion.description;
+                recommendationPanel.querySelector("[data-task-meta]").textContent = `${suggestion.subject} · ${suggestion.duration_minutes} min · ${suggestion.study_type}`;
+                recommendationPanel.querySelector("[data-task-reason]").textContent = suggestion.reason;
+                recommendationPanel.hidden = false;
+                confirmButton.disabled = false;
+            } catch (error) {
+                window.alert(error.message);
+            } finally {
+                recommendButton.disabled = false;
+                recommendButton.removeAttribute("aria-busy");
+            }
+        });
+    }
+
+    if (confirmButton) {
+        confirmButton.addEventListener("click", async () => {
+            if (!currentRecommendation) return;
+            confirmButton.disabled = true;
+            const response = await fetch(confirmButton.dataset.endpoint, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": confirmButton.dataset.csrfToken,
+                },
+                body: JSON.stringify(currentRecommendation),
+            });
+            const payload = await response.json();
+            if (response.ok && payload.success) {
+                window.location.reload();
+                return;
+            }
+            window.alert(payload.error || "Não foi possível adicionar a tarefa.");
+            confirmButton.disabled = false;
+        });
+    }
 });

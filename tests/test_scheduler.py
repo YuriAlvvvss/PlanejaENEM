@@ -207,6 +207,18 @@ class TestGenerateSessionSchedule:
         )
         assert schedule == []
 
+    def test_schedule_uses_only_selected_weekdays_until_exam(self):
+        start = date(2026, 9, 14)
+        schedule = generate_session_schedule(
+            available_days=["seg", "qua"],
+            available_hours=["08:00-09:00"],
+            daily_minutes=60,
+            exam_date=start + timedelta(days=6),
+            today=start,
+        )
+        assert [item["date"].weekday() for item in schedule] == [0, 2]
+        assert all(item["date"] <= start + timedelta(days=6) for item in schedule)
+
 
 class TestDistributeSessions:
     def test_basic_distribution(self):
@@ -257,6 +269,25 @@ class TestDistributeSessions:
             assert "start_time" in session
             assert "end_time" in session
             assert "duration_minutes" in session
+
+    def test_sessions_stay_inside_slots_and_daily_limit(self):
+        target = date(2026, 9, 14)
+        schedule = [{
+            "date": target,
+            "day_of_week": "seg",
+            "slots": [(time(8, 0), time(9, 0)), (time(14, 0), time(16, 0))],
+        }]
+        sessions = distribute_sessions(
+            schedule,
+            {1: {"minutes": 240}},
+            {1: {"score": 80, "area": "matematica", "performance": "medium"}},
+            90,
+        )
+        assert sum(session["duration_minutes"] for session in sessions) <= 90
+        for session in sessions:
+            assert session["session_date"] == target
+            assert session["start_time"] >= time(8, 0)
+            assert session["end_time"] <= time(9, 0) or session["start_time"] >= time(14, 0)
 
 
 class TestExamDateFromSchedule:

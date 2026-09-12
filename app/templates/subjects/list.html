@@ -7,7 +7,6 @@
         <div class="eyebrow">Organização</div>
         <h2>Matérias</h2>
     </div>
-    <a href="{{ url_for('subjects.create') }}" class="btn btn-primary">+ Nova Matéria</a>
 </div>
 
 {% if subjects %}
@@ -32,10 +31,7 @@
 
                                 <small class="text-muted d-block mb-3">{{ subject.area_label }} · {{ subject.completed_tasks }}/{{ subject.total_tasks }} tarefas concluídas</small>
 
-                <div class="d-flex gap-2">
-                    <a href="{{ url_for('subjects.edit', id=subject.id) }}" class="btn btn-outline-primary btn-sm flex-fill">Editar</a>
-                    <a href="{{ url_for('subjects.delete', id=subject.id) }}" class="btn btn-outline-danger btn-sm flex-fill">Excluir</a>
-                </div>
+                <small class="text-muted">Matéria oficial do ENEM</small>
             </div>
         </div>
     </div>
@@ -43,9 +39,8 @@
 </div>
 {% else %}
 <div class="workspace-empty">
-    <h5>Nenhuma matéria cadastrada</h5>
-    <p>Crie suas disciplinas para organizar o estudo e acompanhar o progresso.</p>
-    <a href="{{ url_for('subjects.create') }}" class="btn btn-primary">Criar primeiro assunto</a>
+    <h5>Matérias em preparação</h5>
+    <p>As matérias oficiais do ENEM serão disponibilizadas automaticamente.</p>
 </div>
 {% endif %}
 {% endblock %}

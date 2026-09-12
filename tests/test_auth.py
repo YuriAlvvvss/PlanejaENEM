@@ -3,6 +3,7 @@ from datetime import date
 import pytest
 from app import create_app, db
 from app.models import User, Subject, Task
+from app.subjects.catalog import ENEM_SUBJECT_CATALOG, provision_subjects
 
 
 @pytest.fixture
@@ -42,6 +43,31 @@ def test_register_success(client):
     )
     assert response.status_code == 200
     assert User.query.filter_by(email="ana@example.com").count() == 1
+    user = User.query.filter_by(email="ana@example.com").first()
+    subjects = Subject.query.filter_by(user_id=user.id).order_by(Subject.nome).all()
+    assert {subject.nome for subject in subjects} == {
+        name for _, name, _ in ENEM_SUBJECT_CATALOG
+    }
+
+
+def test_subject_catalog_provisioning_is_idempotent(client):
+    client.post(
+        "/auth/register",
+        data={
+            "nome": "Ana",
+            "email": "ana@example.com",
+            "senha": "Senha123",
+            "confirmar_senha": "Senha123",
+        },
+        follow_redirects=True,
+    )
+    user = User.query.filter_by(email="ana@example.com").first()
+
+    provision_subjects(user.id)
+    provision_subjects(user.id)
+    db.session.commit()
+
+    assert Subject.query.filter_by(user_id=user.id).count() == len(ENEM_SUBJECT_CATALOG)
 
 
 def test_register_duplicate_email(client):
@@ -183,7 +209,7 @@ def test_protected_route_requires_login(client):
     assert b"Entrar" in response.data
 
 
-def test_create_subject_and_dashboard_summary(client):
+def test_subject_catalog_and_dashboard_summary(client):
     user = User(nome="Ana", email="ana@example.com")
     user.set_senha("Senha123")
     db.session.add(user)
@@ -191,13 +217,10 @@ def test_create_subject_and_dashboard_summary(client):
 
     login(client)
 
-    response = client.post(
-        "/subjects/new",
-        data={"nome": "Matemática", "cor": "#ff0000"},
-        follow_redirects=True,
-    )
+    response = client.get("/subjects/")
     assert response.status_code == 200
     assert Subject.query.filter_by(nome="Matemática", user_id=user.id).count() == 1
+    assert client.post("/subjects/new", follow_redirects=True).status_code == 404
 
     dashboard = client.get("/")
     assert dashboard.status_code == 200
@@ -240,6 +263,45 @@ def test_create_task_filter_and_toggle(client):
     assert toggle_response.status_code == 200
     db.session.refresh(task)
     assert task.concluida is True
+
+
+def test_task_recommendation_returns_preview_without_persisting(client):
+    user = User(nome="Ana", email="ana@example.com")
+    user.set_senha("Senha123")
+    db.session.add(user)
+    db.session.commit()
+
+    login(client)
+
+    response = client.post(
+        "/tasks/recommend",
+        json={"available_minutes": 30},
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["success"] is True
+    assert payload["recommendation"]["duration_minutes"] <= 30
+    assert payload["recommendation"]["subject_id"] is not None
+    assert Task.query.filter_by(user_id=user.id).count() == 0
+
+
+def test_task_recommendation_requires_confirmation_to_persist(client):
+    user = User(nome="Ana", email="ana@example.com")
+    user.set_senha("Senha123")
+    db.session.add(user)
+    db.session.commit()
+    login(client)
+
+    recommendation = client.post(
+        "/tasks/recommend", json={"available_minutes": 30}
+    ).get_json()["recommendation"]
+    response = client.post("/tasks/recommend/confirm", json=recommendation)
+
+    assert response.status_code == 201
+    task = db.session.get(Task, response.get_json()["task_id"])
+    assert task is not None
+    assert task.titulo == recommendation["title"]
 
 
 def test_dashboard_shows_performance_and_routine(client):
@@ -299,4 +361,3 @@ def test_dashboard_shows_performance_and_routine(client):
     assert b"chart.js" in response.data
     assert b"Calend" not in response.data
     assert b"Mapa mental" in response.data
-    assert b"Alta" in response.data

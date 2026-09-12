@@ -86,6 +86,15 @@ def _create_question(client, subject_id, topic_id=None, resposta_correta="A"):
     return Question.query.filter_by(enunciado="Quanto e 2 + 2?").first()
 
 
+def test_manual_question_creation_is_disabled(client):
+    _create_user(client, "a@test.com")
+    _login(client, "a@test.com")
+
+    response = client.get("/questions/new")
+
+    assert response.status_code == 404
+
+
 class TestTopicCRUD:
     def test_list_topics_empty(self, client):
         _create_user(client, "a@test.com")

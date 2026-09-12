@@ -7,7 +7,29 @@
         <div class="eyebrow">Planejamento</div>
         <h2>Tarefas</h2>
     </div>
-    <a href="{{ url_for('tasks.create') }}" class="btn btn-primary">+ Nova Tarefa</a>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-primary" data-task-recommend
+                data-endpoint="{{ url_for('tasks.recommend') }}"
+                data-csrf-token="{{ csrf_token() }}">
+            <i class="bi bi-stars"></i> Sugerir tarefa
+        </button>
+        <a href="{{ url_for('tasks.create') }}" class="btn btn-primary">+ Nova Tarefa</a>
+    </div>
+</div>
+
+<div class="card mb-4" data-task-recommendation hidden>
+    <div class="card-body">
+        <div class="eyebrow">Sugestão da IA</div>
+        <h5 data-task-title class="mb-2"></h5>
+        <p data-task-description class="mb-2"></p>
+        <small data-task-meta class="text-muted"></small>
+        <p data-task-reason class="text-muted mt-2 mb-0"></p>
+        <button type="button" class="btn btn-primary btn-sm mt-3" data-task-confirm
+                data-endpoint="{{ url_for('tasks.confirm_recommendation') }}"
+                data-csrf-token="{{ csrf_token() }}" disabled>
+            Adicionar tarefa sugerida
+        </button>
+    </div>
 </div>
 
 <div class="card mb-4">
@@ -45,7 +67,6 @@
                 <th style="width: 52px;"></th>
                 <th>Tarefa</th>
                 <th>Matéria</th>
-                <th>Prioridade</th>
                 <th>Data Prevista</th>
                 <th>Ações</th>
             </tr>
@@ -71,15 +92,6 @@
                     <span class="status-pill" style="background-color: {{ task.subject.cor }}22; color: {{ task.subject.cor }};">
                         {{ task.subject.nome }}
                     </span>
-                </td>
-                <td>
-                    {% if task.prioridade == 'alta' %}
-                    <span class="status-pill bg-danger-subtle text-danger">Alta</span>
-                    {% elif task.prioridade == 'media' %}
-                    <span class="status-pill bg-warning-subtle text-warning">Média</span>
-                    {% else %}
-                    <span class="status-pill bg-info-subtle text-info">Baixa</span>
-                    {% endif %}
                 </td>
                 <td>
                     {% if task.data_prevista %}

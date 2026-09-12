@@ -1,6 +1,6 @@
 from datetime import date
 
-from flask import flash, redirect, render_template, request, url_for
+from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.authz import get_user_task
@@ -9,6 +9,8 @@ from app.main.stats import mark_task_completion
 from app.models import Subject, Task
 from app.tasks import tasks_bp
 from app.tasks.forms import TaskForm
+from app.ai.task_recommender import TaskRecommendationInput
+from app.subjects.catalog import provision_subjects
 
 
 def _safe_next_url():
@@ -53,6 +55,86 @@ def list_tasks():
     )
 
 
+@tasks_bp.route("/recommend", methods=["POST"])
+@login_required
+def recommend():
+    """Retorna uma tarefa sugerida pela IA sem persistir dados."""
+    data = request.get_json(silent=True) or {}
+    available_minutes = data.get("available_minutes", 60)
+    try:
+        available_minutes = int(available_minutes)
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "available_minutes invalido"}), 400
+    if available_minutes < 15 or available_minutes > 720:
+        return jsonify({"success": False, "error": "available_minutes deve estar entre 15 e 720"}), 400
+
+    subjects = Subject.query.filter_by(user_id=current_user.id).order_by(Subject.nome).all()
+    if not subjects:
+        provision_subjects(current_user.id)
+        db.session.commit()
+        subjects = Subject.query.filter_by(user_id=current_user.id).order_by(Subject.nome).all()
+    pending_tasks = Task.query.filter_by(user_id=current_user.id, concluida=False).all()
+    recommendation = current_app.task_recommender.generate(
+        TaskRecommendationInput(
+            subjects=[subject.nome for subject in subjects],
+            weak_subjects=[],
+            pending_tasks=[task.titulo for task in pending_tasks],
+            available_minutes=available_minutes,
+        )
+    )
+    subject = next((item for item in subjects if item.nome == recommendation.subject), None)
+    if subject is None:
+        return jsonify({"success": False, "error": "Nenhuma materia disponivel"}), 409
+
+    return jsonify({
+        "success": True,
+        "recommendation": {
+            "title": recommendation.title,
+            "description": recommendation.description,
+            "subject_id": subject.id,
+            "subject": recommendation.subject,
+            "study_type": recommendation.study_type,
+            "duration_minutes": recommendation.duration_minutes,
+            "reason": recommendation.reason,
+        },
+    }), 200
+
+
+@tasks_bp.route("/recommend/confirm", methods=["POST"])
+@login_required
+def confirm_recommendation():
+    """Persiste uma recomendacao somente apos confirmacao explicita."""
+    data = request.get_json(silent=True) or {}
+    title = (data.get("title") or "").strip()
+    description = (data.get("description") or "").strip()
+    subject_id = data.get("subject_id")
+    duration = data.get("duration_minutes")
+
+    if not title or len(title) > 200 or len(description) > 2000:
+        return jsonify({"success": False, "error": "Dados da tarefa invalidos"}), 400
+    try:
+        subject_id = int(subject_id)
+        duration = int(duration)
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "Materia ou duracao invalidas"}), 400
+    if duration < 15 or duration > 720:
+        return jsonify({"success": False, "error": "Duracao deve estar entre 15 e 720 minutos"}), 400
+
+    subject = Subject.query.filter_by(id=subject_id, user_id=current_user.id).first()
+    if subject is None:
+        return jsonify({"success": False, "error": "Materia nao encontrada"}), 404
+
+    task = Task(
+        titulo=title,
+        descricao=description,
+        subject_id=subject.id,
+        user_id=current_user.id,
+    )
+    db.session.add(task)
+    db.session.commit()
+    return jsonify({"success": True, "task_id": task.id}), 201
+
+
 @tasks_bp.route("/new", methods=["GET", "POST"])
 @login_required
 def create():
@@ -75,7 +157,6 @@ def create():
             subject_id=form.subject_id.data,
             user_id=current_user.id,
             data_prevista=form.data_prevista.data,
-            prioridade=form.prioridade.data,
         )
         mark_task_completion(task, concluida)
         db.session.add(task)
@@ -104,7 +185,6 @@ def edit(id):
         task.descricao = form.descricao.data
         task.subject_id = form.subject_id.data
         task.data_prevista = form.data_prevista.data
-        task.prioridade = form.prioridade.data
         mark_task_completion(task, concluida)
         db.session.commit()
         flash("Tarefa atualizada!", "success")

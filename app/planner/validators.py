@@ -65,7 +65,7 @@ def validate_available_hours(hours_str: str) -> tuple[list[str], list[str]]:
         return [], ["Informe os horários disponíveis."]
 
     errors = []
-    valid_slots = []
+    parsed_slots = []
 
     for chunk in str(hours_str).split(","):
         slot = chunk.strip()
@@ -97,9 +97,19 @@ def validate_available_hours(hours_str: str) -> tuple[list[str], list[str]]:
                 errors.append(f"Slot '{slot}' muito curto (mínimo 30 minutos).")
                 continue
 
-            valid_slots.append(f"{parts[0].strip()}-{parts[1].strip()}")
+            parsed_slots.append((start, end))
         except ValueError:
             errors.append(f"Horário inválido: '{slot}'. Use formato HH:MM.")
+
+    parsed_slots.sort()
+    valid_slots = []
+    previous_end = None
+    for start, end in parsed_slots:
+        if previous_end is not None and start < previous_end:
+            errors.append("Os horários disponíveis não podem se sobrepor.")
+            continue
+        valid_slots.append(f"{start.strftime('%H:%M')}-{end.strftime('%H:%M')}")
+        previous_end = end
 
     return valid_slots, errors
 
@@ -166,37 +176,11 @@ def validate_subject_settings(
     form_data: dict,
 ) -> tuple[dict, list[str]]:
     """
-    Valida as configurações de prioridade e dificuldade das matérias.
+    Mantem compatibilidade com o planner antigo sem aceitar preferencias manuais.
 
     Retorna (settings_validos, erros).
     """
-    errors = []
-    settings = {}
-
-    for subject in subjects:
-        priority_raw = form_data.get(f"priority_{subject.id}", 3)
-        difficulty_raw = form_data.get(f"difficulty_{subject.id}", 3)
-
-        try:
-            priority = int(priority_raw)
-            if priority < 1 or priority > 5:
-                priority = 3
-        except (ValueError, TypeError):
-            priority = 3
-
-        try:
-            difficulty = int(difficulty_raw)
-            if difficulty < 1 or difficulty > 5:
-                difficulty = 3
-        except (ValueError, TypeError):
-            difficulty = 3
-
-        settings[subject.id] = {
-            "priority": priority,
-            "difficulty": difficulty,
-        }
-
-    return settings, errors
+    return {}, []
 
 
 def check_availability_conflict(

@@ -123,8 +123,8 @@ def get_subject_need_data(
                 overdue_reviews += 1
 
     score_data = calculate_subject_need_score(
-        priority=subject.prioridade,
-        difficulty=subject.dificuldade,
+        priority=3,
+        difficulty=3,
         correct_pct=performance["correct_pct"],
         total_questions=performance["total_tasks"],
         days_until_exam=days_until_exam,
@@ -181,20 +181,7 @@ def generate_adaptive_plan(
     explanations = {}
 
     for subject in subjects:
-        settings = subject_settings.get(subject.id, {"priority": 3, "difficulty": 3})
-
-        merged_subject = subject
-        if settings.get("priority") != subject.prioridade:
-            merged_subject = type(subject)()
-            merged_subject.id = subject.id
-            merged_subject.nome = subject.nome
-            merged_subject.cor = subject.cor
-            merged_subject.prioridade = settings["priority"]
-            merged_subject.dificuldade = settings.get("difficulty", subject.dificuldade)
-            merged_subject.area = subject.area
-            merged_subject.user_id = user_id
-
-        need_data = get_subject_need_data(merged_subject, user_id, exam_date, today)
+        need_data = get_subject_need_data(subject, user_id, exam_date, today)
 
         subject_scores.append({
             "subject_id": subject.id,
@@ -216,12 +203,26 @@ def generate_adaptive_plan(
 
     user = db.session.get(User, user_id)
     weekly_goal = getattr(user, "weekly_goal_minutes", 600) if user else 600
+    weekly_goal = min(weekly_goal, _weekly_capacity(days, hours, daily_minutes))
 
     allocation_result = calculate_time_allocation(
         subject_scores, weekly_goal, len(days)
     )
 
     subject_allocations = allocation_result["allocations"]
+
+    from flask import current_app
+    from app.ai.planner_recommender import PlannerRecommendationInput
+
+    guidance = current_app.planner_recommender.generate(
+        PlannerRecommendationInput(
+            subjects=[
+                {"name": subject.nome, "performance": item["performance"]}
+                for subject, item in zip(subjects, subject_scores)
+            ],
+            days_until_exam=max(0, (exam_date - today).days),
+        )
+    )
 
     subject_data_for_scheduler = {}
     for s in subject_scores:
@@ -231,6 +232,14 @@ def generate_adaptive_plan(
                 "score": s["score"],
                 "area": s["area"],
                 "performance": s["performance"],
+                "recommended_study_type": next(
+                    (
+                        guidance.study_types.get(subject.nome)
+                        for subject in subjects
+                        if subject.id == sid
+                    ),
+                    None,
+                ),
             }
 
     schedule = generate_session_schedule(
@@ -267,6 +276,22 @@ def generate_adaptive_plan(
     }
 
 
+def _weekly_capacity(days: list[str], hours: list[str], daily_minutes: int) -> int:
+    """Calcula a capacidade semanal real da disponibilidade informada."""
+    slot_minutes = 0
+    for slot in hours:
+        parts = slot.split("-")
+        if len(parts) != 2:
+            continue
+        try:
+            start = datetime.strptime(parts[0].strip(), "%H:%M")
+            end = datetime.strptime(parts[1].strip(), "%H:%M")
+        except ValueError:
+            continue
+        slot_minutes += max(0, int((end - start).total_seconds() / 60))
+    return len(days) * min(max(0, daily_minutes), slot_minutes)
+
+
 def _build_explanation_reasons(need_data: dict) -> list[str]:
     """Constrói lista de motivos para a prioridade da matéria."""
     reasons = []
@@ -279,12 +304,6 @@ def _build_explanation_reasons(need_data: dict) -> list[str]:
             reasons.append(f"Desempenho: {pct:.0f}%")
         else:
             reasons.append("Desempenho: sem dados suficientes")
-
-    if components.get("difficulty", 50) > 60:
-        reasons.append("Dificuldade: alta")
-
-    if components.get("priority", 50) > 60:
-        reasons.append("Prioridade: alta")
 
     if need_data.get("overdue_reviews", 0) > 0:
         reasons.append(f"{need_data['overdue_reviews']} revisão(ões) atrasada(s)")
@@ -356,7 +375,7 @@ def replan_after_missed_sessions(
             "priority_score": session.priority_score,
         })
 
-    plan = StudyPlan.query.filter_by(user_id=user_id).order_by(
+    plan = StudyPlan.query.filter_by(user_id=user_id, is_active=True).order_by(
         StudyPlan.generated_at.desc()
     ).first()
 
@@ -549,4 +568,8 @@ def process_planner_request(
             "Não foi possível gerar um cronograma. Verifique sua disponibilidade."
         )
 
+    result["available_days"] = valid_days
+    result["available_hours"] = valid_hours
+    result["daily_minutes"] = valid_minutes
+    result["exam_date"] = valid_exam_date
     return result, all_errors

@@ -39,6 +39,42 @@ logger = logging.getLogger(__name__)
 _RETRYABLE_STATUS_CODES = {500, 502, 503}
 
 
+def _parse_structured_content(content: str) -> dict:
+    """Extrai um objeto JSON mesmo quando o modelo adiciona markdown ou texto."""
+    if not content or not content.strip():
+        raise AIValidationError("Resposta estruturada vazia")
+
+    cleaned = content.strip()
+    if cleaned.startswith("```"):
+        lines = cleaned.splitlines()
+        if lines and lines[0].strip().startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        cleaned = "\n".join(lines).strip()
+
+    try:
+        parsed = json.loads(cleaned)
+    except (json.JSONDecodeError, ValueError):
+        decoder = json.JSONDecoder()
+        starts = [index for index, char in enumerate(cleaned) if char == "{"]
+        parsed = None
+        for start in starts:
+            try:
+                candidate, _ = decoder.raw_decode(cleaned[start:])
+            except json.JSONDecodeError:
+                continue
+            if isinstance(candidate, dict):
+                parsed = candidate
+                break
+        if parsed is None:
+            raise AIValidationError("Resposta não é JSON válido")
+
+    if not isinstance(parsed, dict):
+        raise AIValidationError("Resposta JSON não é um objeto")
+    return parsed
+
+
 class AIClient:
     """
     Client centralizado para o AI Gateway.
@@ -99,9 +135,11 @@ class AIClient:
             "X-Title": "PlanejaENEM",
         }
 
-    def _should_retry(self, attempt: int, exc: Exception) -> bool:
+    def _should_retry(self, attempt: int, exc: Exception, max_retries: int | None = None) -> bool:
         """Determina se deve tentar novamente."""
-        if attempt >= self._config.max_retries:
+        if max_retries is None:
+            max_retries = self._config.max_retries
+        if attempt >= max_retries:
             return False
         if isinstance(exc, httpx.TimeoutException):
             return True
@@ -145,10 +183,30 @@ class AIClient:
 
         last_exc: Exception | None = None
 
-        for attempt in range(self._config.max_retries + 1):
+        structured_features = {
+            "question_generation",
+            "task_recommendation",
+            "planner_recommendation",
+            "explanation",
+            "feedback",
+            "review",
+        }
+        is_structured = feature in structured_features
+        max_retries = self._config.structured_max_retries if is_structured else self._config.max_retries
+        timeout = (
+            self._config.task_recommendation_timeout
+            if feature == "task_recommendation"
+            else self._config.structured_timeout
+            if is_structured
+            else self._config.timeout
+        )
+
+        for attempt in range(max_retries + 1):
             try:
                 start_time = time.monotonic()
-                response = self._http.post(url, json=payload, headers=headers)
+                response = self._http.post(
+                    url, json=payload, headers=headers, timeout=timeout
+                )
                 latency_ms = (time.monotonic() - start_time) * 1000
 
                 if response.status_code == 429:
@@ -164,7 +222,7 @@ class AIClient:
                         retry_after=retry_after,
                     )
 
-                    if not self._should_retry(attempt + 1, exc):
+                    if not self._should_retry(attempt + 1, exc, max_retries):
                         self._tracker.record(
                             feature=feature,
                             model=self._config.model,
@@ -180,7 +238,7 @@ class AIClient:
                     logger.warning(
                         "AI rate limit (tentativa %d/%d), retry em %.1fs",
                         attempt + 1,
-                        self._config.max_retries + 1,
+                        max_retries + 1,
                         delay,
                     )
                     time.sleep(delay)
@@ -200,7 +258,7 @@ class AIClient:
                         provider_message=provider_msg,
                     )
 
-                    if not self._should_retry(attempt + 1, exc):
+                    if not self._should_retry(attempt + 1, exc, max_retries):
                         self._tracker.record(
                             feature=feature,
                             model=self._config.model,
@@ -243,7 +301,7 @@ class AIClient:
 
             except httpx.TimeoutException as exc:
                 latency_ms = (time.monotonic() - start_time) * 1000
-                if not self._should_retry(attempt + 1, exc):
+                if not self._should_retry(attempt + 1, exc, max_retries):
                     self._tracker.record(
                         feature=feature,
                         model=self._config.model,
@@ -254,16 +312,16 @@ class AIClient:
                         status="timeout",
                     )
                     timeout_exc = AITimeoutError(
-                        f"Timeout após {self._config.timeout}s"
+                        f"Timeout após {timeout}s"
                     )
-                    timeout_exc.timeout_seconds = self._config.timeout
+                    timeout_exc.timeout_seconds = timeout
                     raise timeout_exc from exc
                 last_exc = exc
                 delay = self._calculate_delay(attempt)
                 logger.warning(
                     "AI timeout (tentativa %d/%d), retry em %.1fs",
                     attempt + 1,
-                    self._config.max_retries + 1,
+                    max_retries + 1,
                     delay,
                 )
                 time.sleep(delay)
@@ -370,22 +428,24 @@ class AIClient:
             AIValidationError: Se a resposta não é JSON válido.
             AIValidationError: Se o JSON não contém as chaves esperadas.
         """
+        if request.model is None and self._config.structured_model:
+            request.model = self._config.structured_model
         if request.response_format is None:
             request.response_format = {"type": "json_object"}
 
         chat_response = self.chat(request, feature=feature)
 
         try:
-            parsed = json.loads(chat_response.content)
-        except (json.JSONDecodeError, ValueError) as exc:
-            raise AIValidationError(
-                "Resposta não é JSON válido"
-            ) from exc
-
-        if not isinstance(parsed, dict):
-            raise AIValidationError(
-                "Resposta JSON não é um objeto"
+            parsed = _parse_structured_content(chat_response.content)
+        except AIValidationError:
+            logger.warning(
+                "Resposta estruturada inválida: feature=%s model=%s finish_reason=%s length=%d",
+                feature,
+                chat_response.model,
+                chat_response.finish_reason,
+                len(chat_response.content or ""),
             )
+            raise
 
         if expected_keys:
             missing = [k for k in expected_keys if k not in parsed]

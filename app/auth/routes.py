@@ -16,6 +16,7 @@ from app.auth.forms import (
 )
 from app.extensions import db, limiter
 from app.models import PasswordResetToken, StudyPlan, StudySession, Subject, Task, User
+from app.subjects.catalog import provision_subjects
 
 MAX_FAILED_ATTEMPTS = 5
 LOCK_WINDOW_SECONDS = 300
@@ -92,6 +93,8 @@ def register():
             user = User(nome=form.nome.data.strip(), email=email)
             user.set_senha(form.senha.data)
             db.session.add(user)
+            db.session.flush()
+            provision_subjects(user.id)
             db.session.commit()
             current_app.logger.info("New user registered")
             flash("Conta criada com sucesso! Faça login.", "success")

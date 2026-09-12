@@ -1,6 +1,6 @@
 import logging
 
-from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask import abort, current_app, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.authz import get_user_question, get_user_subject, get_user_topic
@@ -103,6 +103,7 @@ def list_questions():
 @questions_bp.route("/new", methods=["GET", "POST"])
 @login_required
 def create_question_view():
+    abort(404)
     subjects = Subject.query.filter_by(user_id=current_user.id).order_by(Subject.nome).all()
     if not subjects:
         flash("Crie uma matéria antes de criar questões.", "warning")
@@ -240,6 +241,7 @@ def answer_question(id):
 @questions_bp.route("/<int:id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_question(id):
+    abort(404)
     question = get_user_question(id)
     subjects = Subject.query.filter_by(user_id=current_user.id).order_by(Subject.nome).all()
     form = QuestionForm(obj=question)
@@ -285,7 +287,6 @@ def generate_question():
     data = request.get_json(silent=True) or {}
     subject_id = data.get("subject_id")
     topic_id = data.get("topic_id")
-    dificuldade = data.get("dificuldade", 3)
     quantidade = data.get("quantidade", 1)
 
     if not subject_id:
@@ -312,7 +313,7 @@ def generate_question():
             area=area,
             materia=subject.nome,
             assunto=topic_name,
-            dificuldade=int(dificuldade),
+            dificuldade=3,
             quantidade=int(quantidade),
         )
 

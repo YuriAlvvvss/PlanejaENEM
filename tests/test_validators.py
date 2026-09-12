@@ -72,7 +72,13 @@ class TestValidateAvailableHours:
 
     def test_invalid_format(self):
         hours, errors = validate_available_hours("08:00")
+        assert hours == []
         assert len(errors) > 0
+
+    def test_overlapping_slots_are_rejected(self):
+        hours, errors = validate_available_hours("08:00-10:00, 09:00-11:00")
+        assert hours == ["08:00-10:00"]
+        assert any("sobrepor" in error for error in errors)
 
     def test_end_before_start(self):
         hours, errors = validate_available_hours("10:00-08:00")
@@ -147,7 +153,7 @@ class TestValidateExamDate:
 
 
 class TestValidateSubjectSettings:
-    def test_valid_settings(self):
+    def test_manual_settings_are_ignored(self):
         class MockSubject:
             def __init__(self, id):
                 self.id = id
@@ -155,12 +161,10 @@ class TestValidateSubjectSettings:
         subjects = [MockSubject(1), MockSubject(2)]
         form_data = {"priority_1": "5", "difficulty_1": "4", "priority_2": "3", "difficulty_2": "2"}
         settings, errors = validate_subject_settings(subjects, form_data)
-        assert settings[1]["priority"] == 5
-        assert settings[1]["difficulty"] == 4
-        assert settings[2]["priority"] == 3
-        assert settings[2]["difficulty"] == 2
+        assert settings == {}
+        assert errors == []
 
-    def test_invalid_priority_defaults(self):
+    def test_invalid_manual_settings_are_ignored(self):
         class MockSubject:
             def __init__(self, id):
                 self.id = id
@@ -168,8 +172,8 @@ class TestValidateSubjectSettings:
         subjects = [MockSubject(1)]
         form_data = {"priority_1": "invalid", "difficulty_1": "invalid"}
         settings, errors = validate_subject_settings(subjects, form_data)
-        assert settings[1]["priority"] == 3
-        assert settings[1]["difficulty"] == 3
+        assert settings == {}
+        assert errors == []
 
 
 class TestCheckAvailabilityConflict:

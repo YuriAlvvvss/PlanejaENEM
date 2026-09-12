@@ -34,7 +34,7 @@ def weekly_goal_minutes(user, plan=None):
     if stored:
         return int(stored)
     plan = plan or (
-        StudyPlan.query.filter_by(user_id=user.id).order_by(StudyPlan.generated_at.desc()).first()
+        StudyPlan.query.filter_by(user_id=user.id, is_active=True).order_by(StudyPlan.generated_at.desc()).first()
     )
     if plan and plan.daily_minutes and plan.days_list:
         return int(plan.daily_minutes) * max(1, len(plan.days_list))
@@ -89,7 +89,7 @@ def build_dashboard_stats(user, today=None):
     subjects = Subject.query.filter_by(user_id=user.id).order_by(Subject.nome).all()
     tasks = Task.query.filter_by(user_id=user.id).all()
     sessions = StudySession.query.filter_by(user_id=user.id).all()
-    plan = StudyPlan.query.filter_by(user_id=user.id).order_by(StudyPlan.generated_at.desc()).first()
+    plan = StudyPlan.query.filter_by(user_id=user.id, is_active=True).order_by(StudyPlan.generated_at.desc()).first()
 
     planned_week = _minutes_in_range(sessions, week_start, week_end, completed_only=False)
     completed_week = _minutes_in_range(sessions, week_start, week_end, completed_only=True)

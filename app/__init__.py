@@ -238,6 +238,8 @@ def create_app(config_name=None):
     from app.ai.explanation_generator import ExplanationGenerator
     from app.ai.feedback_generator import FeedbackGenerator
     from app.ai.review_generator import ReviewGenerator
+    from app.ai.task_recommender import TaskRecommender
+    from app.ai.planner_recommender import PlannerRecommender
 
     ai_config = load_ai_config()
     ai_tracker = UsageTracker()
@@ -248,6 +250,8 @@ def create_app(config_name=None):
     app.explanation_generator = ExplanationGenerator(app.ai_client)
     app.feedback_generator = FeedbackGenerator(app.ai_client)
     app.review_generator = ReviewGenerator(app.ai_client)
+    app.task_recommender = TaskRecommender(app.ai_client)
+    app.planner_recommender = PlannerRecommender(app.ai_client)
 
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Faça login para acessar esta página."

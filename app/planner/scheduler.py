@@ -326,6 +326,7 @@ def distribute_sessions(
                         "score": data.get("score", 50),
                         "area": data.get("area", "outro"),
                         "performance": data.get("performance", "medium"),
+                        "recommended_study_type": data.get("recommended_study_type"),
                     })
 
             if not subject_list:
@@ -336,11 +337,12 @@ def distribute_sessions(
                 continue
 
             sid = chosen["subject_id"]
-            session_minutes = min(available_minutes, 120)
-            session_minutes = max(30, session_minutes)
+            session_minutes = available_minutes
+            if session_minutes < 30:
+                continue
 
             end_time = (
-                datetime.combine(date.today(), slot_start) +
+                datetime.combine(day_date, slot_start) +
                 timedelta(minutes=session_minutes)
             ).time()
 
@@ -353,6 +355,8 @@ def distribute_sessions(
                 chosen.get("performance", "medium"),
                 120,
             )
+            if chosen.get("recommended_study_type") in STUDY_TYPES:
+                study_type = chosen["recommended_study_type"]
 
             sessions.append({
                 "subject_id": sid,

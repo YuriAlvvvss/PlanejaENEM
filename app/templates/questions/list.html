@@ -11,7 +11,6 @@
         <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#aiGenerateModal">
             <i class="bi bi-robot"></i> Gerar com IA
         </button>
-        <a href="{{ url_for('questions.create_question_view') }}" class="btn btn-primary">+ Nova Questão</a>
     </div>
 </div>
 
@@ -39,16 +38,6 @@
                         {% for topic in topics %}
                         <option value="{{ topic.id }}">{{ topic.nome }}</option>
                         {% endfor %}
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Dificuldade</label>
-                    <select id="aiDifficulty" class="form-select">
-                        <option value="1">1 - Fácil</option>
-                        <option value="2">2 - Médio-fácil</option>
-                        <option value="3" selected>3 - Médio</option>
-                        <option value="4">4 - Médio-difícil</option>
-                        <option value="5">5 - Difícil</option>
                     </select>
                 </div>
                 <div class="mb-3">
@@ -115,7 +104,6 @@
                 <th>Enunciado</th>
                 <th>Matéria</th>
                 <th>Assunto</th>
-                <th>Dificuldade</th>
                 <th>Resposta</th>
                 <th>Ações</th>
             </tr>
@@ -130,14 +118,10 @@
                     </span>
                 </td>
                 <td>{{ q.topic.nome if q.topic else "-" }}</td>
-                <td>
-                    <span class="badge bg-secondary">{{ q.dificuldade }}/5</span>
-                </td>
                 <td><span class="badge bg-success">{{ q.resposta_correta }}</span></td>
                 <td>
                     <div class="btn-group btn-group-sm">
                         <a href="{{ url_for('questions.view_question', id=q.id) }}" class="btn btn-outline-primary">Ver</a>
-                        <a href="{{ url_for('questions.edit_question', id=q.id) }}" class="btn btn-outline-secondary">Editar</a>
                         <a href="{{ url_for('questions.delete_question', id=q.id) }}" class="btn btn-outline-danger">Excluir</a>
                     </div>
                 </td>
@@ -174,7 +158,6 @@ document.getElementById('aiSubject').addEventListener('change', function() {
 function generateWithAI() {
     var subjectId = document.getElementById('aiSubject').value;
     var topicId = document.getElementById('aiTopic').value;
-    var difficulty = document.getElementById('aiDifficulty').value;
     var quantity = document.getElementById('aiQuantity').value;
 
     if (!subjectId) {
@@ -191,7 +174,6 @@ function generateWithAI() {
     var payload = {
         subject_id: parseInt(subjectId),
         topic_id: topicId ? parseInt(topicId) : null,
-        dificuldade: parseInt(difficulty),
         quantidade: parseInt(quantity)
     };
 

@@ -22,8 +22,12 @@ class AIConfig:
     api_key: str = ""
     base_url: str = "https://openrouter.ai/api/v1"
     model: str = ""
+    structured_model: str = ""
     timeout: float = 30.0
     max_retries: int = 2
+    structured_timeout: float = 12.0
+    structured_max_retries: int = 0
+    task_recommendation_timeout: float = 8.0
     max_tokens: int = 2048
     max_questions_per_request: int = 5
     max_questions_per_hour: int = 20
@@ -87,13 +91,22 @@ def load_ai_config() -> AIConfig:
         except (ValueError, TypeError):
             return default
 
+    model = os.environ.get("OPENROUTER_MODEL", "").strip()
+    structured_model = os.environ.get("OPENROUTER_STRUCTURED_MODEL", "").strip()
+    if not structured_model and model == "openrouter/free":
+        structured_model = "openai/gpt-4o-mini"
+
     return AIConfig(
         enabled=_parse_bool(os.environ.get("AI_ENABLED"), default=False),
         api_key=os.environ.get("OPENROUTER_API_KEY", "").strip(),
         base_url=os.environ.get("AI_BASE_URL", "https://openrouter.ai/api/v1").strip(),
-        model=os.environ.get("OPENROUTER_MODEL", "").strip(),
+        model=model,
+        structured_model=structured_model,
         timeout=_parse_float(os.environ.get("AI_TIMEOUT"), default=30.0),
         max_retries=_parse_int(os.environ.get("AI_MAX_RETRIES"), default=2),
+        structured_timeout=_parse_float(os.environ.get("AI_STRUCTURED_TIMEOUT"), default=12.0),
+        structured_max_retries=_parse_int(os.environ.get("AI_STRUCTURED_MAX_RETRIES"), default=0),
+        task_recommendation_timeout=_parse_float(os.environ.get("AI_TASK_TIMEOUT"), default=8.0),
         max_tokens=_parse_int(os.environ.get("AI_MAX_TOKENS"), default=2048),
         max_questions_per_request=_parse_int(os.environ.get("AI_MAX_QUESTIONS_PER_REQUEST"), default=5),
         max_questions_per_hour=_parse_int(os.environ.get("AI_MAX_QUESTIONS_PER_HOUR"), default=20),

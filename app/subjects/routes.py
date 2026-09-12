@@ -1,4 +1,4 @@
-from flask import flash, redirect, render_template, request, url_for
+from flask import abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.authz import get_user_subject
@@ -7,11 +7,14 @@ from app.extensions import db
 from app.models import Subject
 from app.subjects import subjects_bp
 from app.subjects.forms import SubjectForm
+from app.subjects.catalog import provision_subjects
 
 
 @subjects_bp.route("/")
 @login_required
 def list_subjects():
+    provision_subjects(current_user.id)
+    db.session.commit()
     subjects = Subject.query.filter_by(user_id=current_user.id).order_by(Subject.nome).all()
     return render_template("subjects/list.html", subjects=subjects)
 
@@ -19,6 +22,7 @@ def list_subjects():
 @subjects_bp.route("/new", methods=["GET", "POST"])
 @login_required
 def create():
+    abort(404)
     form = SubjectForm()
     if form.validate_on_submit():
         area = form.area.data or "outro"
@@ -43,6 +47,7 @@ def create():
 @subjects_bp.route("/<int:id>/edit", methods=["GET", "POST"])
 @login_required
 def edit(id):
+    abort(404)
     subject = get_user_subject(id)
 
     form = SubjectForm(obj=subject)
@@ -62,6 +67,7 @@ def edit(id):
 @subjects_bp.route("/<int:id>/delete", methods=["GET", "POST"])
 @login_required
 def delete(id):
+    abort(404)
     subject = get_user_subject(id)
 
     if subject.tasks:

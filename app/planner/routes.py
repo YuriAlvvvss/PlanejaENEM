@@ -31,7 +31,7 @@ from app.planner.services import (
 @limiter.limit("10/minute")
 def planner():
     subjects = Subject.query.filter_by(user_id=current_user.id).order_by(Subject.nome).all()
-    existing_plan = StudyPlan.query.filter_by(user_id=current_user.id).order_by(
+    existing_plan = StudyPlan.query.filter_by(user_id=current_user.id, is_active=True).order_by(
         StudyPlan.generated_at.desc()
     ).first()
 
@@ -65,11 +65,11 @@ def planner():
             )
 
         exam_date_str = request.form.get("exam_date", "")
-        exam_date = datetime.strptime(exam_date_str, "%Y-%m-%d").date()
+        exam_date = result["exam_date"]
 
         daily_minutes = request.form.get("daily_minutes", 60, type=int)
         available_days = request.form.getlist("available_days")
-        available_hours = request.form.get("available_hours", "")
+        available_hours = ",".join(result.get("available_hours", []))
 
         from app.planner.validators import validate_available_days
         days_valid, _ = validate_available_days(available_days)

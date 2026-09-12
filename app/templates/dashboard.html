@@ -8,13 +8,6 @@
         <strong>{{ task.titulo }}</strong>
         <small>{{ task.subject.nome }}{% if show_date and task.data_prevista %} · {{ task.data_prevista.strftime('%d/%m') }}{% endif %}</small>
     </span>
-    {% if task.prioridade == 'alta' %}
-    <span class="badge bg-danger">Alta</span>
-    {% elif task.prioridade == 'media' %}
-    <span class="badge bg-warning text-dark">Média</span>
-    {% else %}
-    <span class="badge bg-info">Baixa</span>
-    {% endif %}
 </a>
 {% endmacro %}
 

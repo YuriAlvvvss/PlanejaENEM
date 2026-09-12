@@ -8,11 +8,6 @@ class TaskForm(FlaskForm):
     descricao = TextAreaField("Descrição", validators=[Optional(), Length(max=2000)])
     subject_id = SelectField("Matéria", coerce=int, validators=[DataRequired()])
     data_prevista = DateField("Data Prevista", validators=[Optional()], format="%Y-%m-%d")
-    prioridade = SelectField(
-        "Prioridade",
-        choices=[("baixa", "Baixa"), ("media", "Media"), ("alta", "Alta")],
-        validators=[DataRequired()],
-    )
     concluida = BooleanField("Concluída")
     submit = SubmitField("Salvar")
 
