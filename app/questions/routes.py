@@ -1,9 +1,19 @@
 import logging
+import time
 
-from flask import abort, current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask import abort, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required
+from sqlalchemy.exc import IntegrityError
 
 from app.authz import get_user_question, get_user_subject, get_user_topic
+from app.ai.exceptions import (
+    AIDisabledError,
+    AIConfigurationError,
+    AIProviderError,
+    AIValidationError,
+    AITimeoutError,
+    AIRateLimitError,
+)
 from app.extensions import db
 from app.models import Question, Subject, Topic
 from app.questions import questions_bp
@@ -11,8 +21,8 @@ from app.questions.forms import AnswerForm, QuestionForm, TopicForm
 from app.questions.services import (
     create_question,
     create_topic,
-    get_recent_attempts,
-    get_user_attempt_count,
+    get_attempts_map,
+    get_user_attempt,
     get_user_questions,
     get_user_topics,
     record_attempt,
@@ -90,13 +100,19 @@ def list_questions():
     questions = get_user_questions(current_user.id, subject_id=filter_subject, topic_id=filter_topic)
     subjects = Subject.query.filter_by(user_id=current_user.id).order_by(Subject.nome).all()
     topics = get_user_topics(current_user.id, subject_id=filter_subject)
+    attempt_map = get_attempts_map(current_user.id, [q.id for q in questions])
+    pending_questions = [q for q in questions if q.id not in attempt_map]
+    answered_questions = [q for q in questions if q.id in attempt_map]
     return render_template(
         "questions/list.html",
         questions=questions,
+        pending_questions=pending_questions,
+        answered_questions=answered_questions,
         subjects=subjects,
         topics=topics,
         filter_subject=filter_subject,
         filter_topic=filter_topic,
+        attempt_map=attempt_map,
     )
 
 
@@ -147,14 +163,14 @@ def create_question_view():
 def view_question(id):
     question = get_user_question(id)
     form = AnswerForm()
-    attempt_count = get_user_attempt_count(current_user.id, id)
-    recent_attempts = get_recent_attempts(current_user.id, limit=5)
+    attempt = get_user_attempt(current_user.id, id)
+    if attempt is None:
+        session[f"question_started:{id}"] = time.time()
     return render_template(
         "questions/view.html",
         question=question,
         form=form,
-        attempt_count=attempt_count,
-        recent_attempts=recent_attempts,
+        attempt=attempt,
         explanation=None,
     )
 
@@ -164,14 +180,46 @@ def view_question(id):
 def answer_question(id):
     question = get_user_question(id)
     form = AnswerForm()
+    existing_attempt = get_user_attempt(current_user.id, id)
+
+    if existing_attempt is not None:
+        flash("Esta questão já foi respondida. Você tem apenas uma tentativa.", "warning")
+        return render_template(
+            "questions/view.html",
+            question=question,
+            form=AnswerForm(),
+            attempt=existing_attempt,
+            explanation=None,
+        )
 
     if form.validate_on_submit():
-        attempt = record_attempt(
-            user_id=current_user.id,
-            question_id=id,
-            resposta=form.resposta.data,
-            tempo_segundos=form.tempo_segundos.data,
-        )
+        started_at = session.pop(f"question_started:{id}", None)
+        if started_at:
+            elapsed_seconds = int(max(0, time.time() - started_at))
+        else:
+            # Fallback: sessão expirada ou POST direto (testes/scripts).
+            # Usa o tempo enviado no form (hidden) para não perder a info.
+            elapsed_seconds = form.tempo_segundos.data
+        try:
+            attempt = record_attempt(
+                user_id=current_user.id,
+                question_id=id,
+                resposta=form.resposta.data,
+                tempo_segundos=elapsed_seconds,
+            )
+        except (IntegrityError, ValueError):
+            db.session.rollback()
+            existing_attempt = get_user_attempt(current_user.id, id)
+            if existing_attempt is None:
+                raise
+            flash("Esta questão já foi respondida. Você tem apenas uma tentativa.", "warning")
+            return render_template(
+                "questions/view.html",
+                question=question,
+                form=AnswerForm(),
+                attempt=existing_attempt,
+                explanation=None,
+            )
 
         explanation = None
         try:
@@ -210,9 +258,6 @@ def answer_question(id):
         except Exception as exc:
             logger.warning("Erro ao gerar explicação: %s", exc)
 
-        attempt_count = get_user_attempt_count(current_user.id, id)
-        recent_attempts = get_recent_attempts(current_user.id, limit=5)
-
         if attempt.correta:
             flash("Resposta correta!", "success")
         else:
@@ -229,13 +274,33 @@ def answer_question(id):
             "questions/view.html",
             question=question,
             form=AnswerForm(),
-            attempt_count=attempt_count,
-            recent_attempts=recent_attempts,
+            attempt=attempt,
             explanation=explanation,
         )
 
-    flash("Formulário inválido.", "warning")
-    return redirect(url_for("questions.view_question", id=id))
+    logger.warning(
+        "Falha ao responder questão id=%s user_id=%s errors=%s",
+        id,
+        current_user.id,
+        form.errors,
+    )
+    if form.errors.get("csrf_token"):
+        flash("Sessão expirada. Recarregue a página e tente novamente.", "warning")
+        return redirect(url_for("questions.view_question", id=id))
+    if form.resposta.errors:
+        flash("Selecione uma alternativa antes de enviar.", "warning")
+    elif form.tempo_segundos.errors:
+        flash("Tempo de resposta inválido. Tente novamente.", "warning")
+    else:
+        flash("Formulário inválido. Verifique os campos e tente novamente.", "warning")
+    # Re-renderiza (sem redirect) para preservar erros, seleção e timer da sessão.
+    return render_template(
+        "questions/view.html",
+        question=question,
+        form=form,
+        attempt=None,
+        explanation=None,
+    )
 
 
 @questions_bp.route("/<int:id>/edit", methods=["GET", "POST"])
@@ -285,12 +350,23 @@ def delete_question(id):
 @login_required
 def generate_question():
     data = request.get_json(silent=True) or {}
+    if not isinstance(data, dict):
+        return jsonify({"success": False, "error": "Corpo da requisição inválido"}), 400
+
     subject_id = data.get("subject_id")
     topic_id = data.get("topic_id")
     quantidade = data.get("quantidade", 1)
 
-    if not subject_id:
+    if isinstance(subject_id, bool) or not isinstance(subject_id, int) or subject_id <= 0:
         return jsonify({"success": False, "error": "subject_id é obrigatório"}), 400
+
+    if isinstance(topic_id, bool) or (topic_id is not None and (
+        not isinstance(topic_id, int) or topic_id <= 0
+    )):
+        return jsonify({"success": False, "error": "topic_id inválido"}), 400
+
+    if isinstance(quantidade, bool) or not isinstance(quantidade, int) or quantidade not in {1, 3, 5}:
+        return jsonify({"success": False, "error": "quantidade deve ser 1, 3 ou 5"}), 400
 
     subject = Subject.query.filter_by(id=subject_id, user_id=current_user.id).first()
     if not subject:
@@ -299,6 +375,8 @@ def generate_question():
     topic = None
     if topic_id:
         topic = Topic.query.filter_by(id=topic_id, user_id=current_user.id).first()
+        if not topic or topic.subject_id != subject.id:
+            return jsonify({"success": False, "error": "Assunto não encontrado"}), 404
 
     topic_name = topic.nome if topic else "Geral"
     area = subject.area or "outro"
@@ -314,8 +392,14 @@ def generate_question():
             materia=subject.nome,
             assunto=topic_name,
             dificuldade=3,
-            quantidade=int(quantidade),
+            quantidade=quantidade,
         )
+
+        if not generated:
+            return jsonify({
+                "success": False,
+                "error": "A IA não conseguiu gerar uma questão válida. Tente novamente.",
+            }), 422
 
         created = []
         for g in generated:
@@ -356,7 +440,35 @@ def generate_question():
             "count": len(created),
         }), 201
 
-    except Exception as exc:
+    except AIDisabledError:
+        db.session.rollback()
+        return jsonify({"success": False, "error": "IA não está disponível"}), 503
+    except AIRateLimitError:
+        db.session.rollback()
+        return jsonify({"success": False, "error": "Limite do provedor de IA atingido"}), 429
+    except ValueError as exc:
+        db.session.rollback()
+        message = str(exc)
+        if "Limite horário" in message:
+            return jsonify({"success": False, "error": message}), 429
+        return jsonify({"success": False, "error": "Parâmetros inválidos"}), 400
+    except AIConfigurationError:
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "error": "A IA está habilitada, mas sua configuração está incompleta.",
+        }), 503
+    except (AIValidationError, AITimeoutError, AIProviderError) as exc:
         db.session.rollback()
         logger.warning("Erro ao gerar questões via IA: %s", exc)
-        return jsonify({"success": False, "error": str(exc)}), 500
+        return jsonify({
+            "success": False,
+            "error": "Não foi possível gerar questões agora. Tente novamente.",
+        }), 502
+    except Exception:
+        db.session.rollback()
+        logger.exception("Erro inesperado ao gerar questões via IA")
+        return jsonify({
+            "success": False,
+            "error": "Erro interno ao gerar questões.",
+        }), 500

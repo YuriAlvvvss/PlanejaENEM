@@ -95,6 +95,11 @@ class QuestionGenerator:
         self._cache: dict[str, _CacheEntry] = {}
         self._hourly_usage: dict[str, list[float]] = {}
 
+    @property
+    def enabled(self) -> bool:
+        """Indica se o client de IA está habilitado."""
+        return self._client.enabled
+
     def _cache_key(self, area: str, materia: str, assunto: str, dificuldade: int) -> str:
         """Gera chave de cache aproximada por combinação."""
         raw = f"{area.lower().strip()}|{materia.lower().strip()}|{assunto.lower().strip()}|{dificuldade}"
@@ -190,7 +195,7 @@ class QuestionGenerator:
         request = ChatRequest(
             messages=chat_messages,
             temperature=0.7,
-            max_tokens=self._config.batch_max_tokens,
+            max_tokens=max(self._config.batch_max_tokens, quantidade * 800),
         )
 
         structured = self._client.chat_structured(

@@ -313,6 +313,7 @@ class Question(db.Model):
 class QuestionAttempt(db.Model):
     __tablename__ = "question_attempts"
     __table_args__ = (
+        db.UniqueConstraint("user_id", "question_id", name="uq_attempt_user_question"),
         db.Index("idx_attempt_user_id", "user_id"),
         db.Index("idx_attempt_question_id", "question_id"),
         db.Index("idx_attempt_user_question", "user_id", "question_id"),
