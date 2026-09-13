@@ -22,6 +22,7 @@ class TaskRecommendationInput:
     weak_subjects: list[str]
     pending_tasks: list[str]
     available_minutes: int = 60
+    target_subject: str | None = None
 
 
 @dataclass(frozen=True)
@@ -49,6 +50,7 @@ def _build_prompt(inp: TaskRecommendationInput) -> list[dict]:
             "content": (
                 "Voce e um tutor do ENEM. Recomende uma unica tarefa pratica e executavel. "
                 "Use somente as materias fornecidas. Nao defina prioridade ou dificuldade. "
+                "Se houver uma materia obrigatoria, use exatamente essa materia. "
                 "Responda apenas JSON valido com title, description, subject, study_type, "
                 "duration_minutes e reason. A duracao deve ser um numero entre 15 e o tempo disponivel."
             ),
@@ -57,6 +59,7 @@ def _build_prompt(inp: TaskRecommendationInput) -> list[dict]:
             "role": "user",
             "content": (
                 f"Materias: {', '.join(inp.subjects)}\n"
+                f"Materia obrigatoria: {inp.target_subject or 'nenhuma'}\n"
                 f"Materias com menor desempenho: {', '.join(inp.weak_subjects) or 'sem dados'}\n"
                 f"Tarefas pendentes: {', '.join(inp.pending_tasks[:10]) or 'nenhuma'}\n"
                 f"Tempo disponivel hoje: {inp.available_minutes} minutos\n"
@@ -67,7 +70,7 @@ def _build_prompt(inp: TaskRecommendationInput) -> list[dict]:
 
 
 def _fallback(inp: TaskRecommendationInput) -> TaskRecommendation:
-    subject = (inp.weak_subjects or inp.subjects or ["Matéria do ENEM"])[0]
+    subject = inp.target_subject or (inp.weak_subjects or inp.subjects or ["Matéria do ENEM"])[0]
     duration = max(15, min(inp.available_minutes, 45))
     return TaskRecommendation(
         title=f"Revisar {subject}",
@@ -83,6 +86,8 @@ def _parse(data: dict, inp: TaskRecommendationInput, model: str) -> TaskRecommen
     subject = _sanitize(data.get("subject"))
     if subject not in inp.subjects:
         raise AIValidationError("A recomendacao retornou uma materia invalida")
+    if inp.target_subject and subject != inp.target_subject:
+        raise AIValidationError("A recomendacao nao respeitou a materia obrigatoria")
     duration = int(data.get("duration_minutes", 0))
     if duration < 15 or duration > inp.available_minutes:
         raise AIValidationError("A duracao retornada esta fora do tempo disponivel")

@@ -286,6 +286,29 @@ def test_task_recommendation_returns_preview_without_persisting(client):
     assert Task.query.filter_by(user_id=user.id).count() == 0
 
 
+def test_task_recommendation_rotates_preview_subjects_without_confirmation(client):
+    user = User(nome="Ana", email="ana@example.com")
+    user.set_senha("Senha123")
+    db.session.add(user)
+    db.session.commit()
+    login(client)
+
+    suggested_subjects = []
+    for _ in ENEM_SUBJECT_CATALOG:
+        response = client.post("/tasks/recommend", json={"available_minutes": 30})
+        assert response.status_code == 200
+        suggested_subjects.append(response.get_json()["recommendation"]["subject"])
+
+    assert len(set(suggested_subjects)) == len(ENEM_SUBJECT_CATALOG)
+    assert Task.query.filter_by(user_id=user.id).count() == 0
+
+    next_response = client.post(
+        "/tasks/recommend", json={"available_minutes": 30}
+    )
+    assert next_response.status_code == 200
+    assert next_response.get_json()["recommendation"]["subject"] == suggested_subjects[0]
+
+
 def test_task_recommendation_requires_confirmation_to_persist(client):
     user = User(nome="Ana", email="ana@example.com")
     user.set_senha("Senha123")
@@ -302,6 +325,33 @@ def test_task_recommendation_requires_confirmation_to_persist(client):
     task = db.session.get(Task, response.get_json()["task_id"])
     assert task is not None
     assert task.titulo == recommendation["title"]
+
+
+def test_task_recommendation_covers_all_subjects_before_repeating(client):
+    user = User(nome="Ana", email="ana@example.com")
+    user.set_senha("Senha123")
+    db.session.add(user)
+    db.session.commit()
+    login(client)
+
+    suggested_subjects = []
+    for _ in ENEM_SUBJECT_CATALOG:
+        recommendation_response = client.post(
+            "/tasks/recommend", json={"available_minutes": 30}
+        )
+        assert recommendation_response.status_code == 200
+        recommendation = recommendation_response.get_json()["recommendation"]
+        assert recommendation["subject"] not in suggested_subjects
+        suggested_subjects.append(recommendation["subject"])
+
+        confirmation_response = client.post(
+            "/tasks/recommend/confirm", json=recommendation
+        )
+        assert confirmation_response.status_code == 201
+
+    assert set(suggested_subjects) == {
+        subject_name for _, subject_name, _ in ENEM_SUBJECT_CATALOG
+    }
 
 
 def test_dashboard_shows_performance_and_routine(client):

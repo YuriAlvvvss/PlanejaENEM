@@ -1,7 +1,8 @@
 from datetime import date
 
-from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask import current_app, flash, jsonify, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required
+from sqlalchemy import func
 
 from app.authz import get_user_task
 from app.extensions import db
@@ -12,12 +13,39 @@ from app.tasks.forms import TaskForm
 from app.ai.task_recommender import TaskRecommendationInput
 from app.subjects.catalog import provision_subjects
 
+_RECOMMENDATION_ROTATION_KEY = "task_recommendation_subject_ids"
+
 
 def _safe_next_url():
     candidate = request.form.get("next") or request.args.get("next")
     if candidate and candidate.startswith("/") and not candidate.startswith("//"):
         return candidate
     return url_for("tasks.list_tasks")
+
+
+def _select_recommendation_subject(subjects, user_id):
+    task_counts = dict(
+        db.session.query(Task.subject_id, func.count(Task.id))
+        .filter(Task.user_id == user_id)
+        .group_by(Task.subject_id)
+        .all()
+    )
+    subject_ids = {subject.id for subject in subjects}
+    rotation_ids = [
+        subject_id
+        for subject_id in session.get(_RECOMMENDATION_ROTATION_KEY, [])
+        if isinstance(subject_id, int) and subject_id in subject_ids
+    ]
+    recent_ids = set(rotation_ids)
+    candidates = [subject for subject in subjects if subject.id not in recent_ids]
+    if not candidates:
+        rotation_ids = []
+        candidates = list(subjects)
+
+    selected = min(candidates, key=lambda subject: (task_counts.get(subject.id, 0), subject.id))
+    rotation_ids.append(selected.id)
+    session[_RECOMMENDATION_ROTATION_KEY] = rotation_ids
+    return selected
 
 
 @tasks_bp.route("/")
@@ -73,13 +101,15 @@ def recommend():
         provision_subjects(current_user.id)
         db.session.commit()
         subjects = Subject.query.filter_by(user_id=current_user.id).order_by(Subject.nome).all()
+    target_subject = _select_recommendation_subject(subjects, current_user.id)
     pending_tasks = Task.query.filter_by(user_id=current_user.id, concluida=False).all()
     recommendation = current_app.task_recommender.generate(
         TaskRecommendationInput(
             subjects=[subject.nome for subject in subjects],
             weak_subjects=[],
-            pending_tasks=[task.titulo for task in pending_tasks],
+            pending_tasks=[f"{task.titulo} - {task.subject.nome}" for task in pending_tasks],
             available_minutes=available_minutes,
+            target_subject=target_subject.nome,
         )
     )
     subject = next((item for item in subjects if item.nome == recommendation.subject), None)
