@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Ativar 2FA - PlanejaENEM{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="eyebrow">Segurança</div>
+        <h2>Autenticação em dois fatores</h2>
+    </div>
+    <a href="{{ url_for('auth.profile') }}" class="btn btn-outline-secondary btn-sm">Voltar ao perfil</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h5>1. Confirme sua senha para gerar a chave</h5>
+        <form method="POST" action="{{ url_for('auth.two_factor_setup') }}">
+            {{ form.hidden_tag() }}
+            <div class="mb-3">
+                <label class="form-label">{{ form.senha_atual.label }}</label>
+                {{ form.senha_atual(class="form-control") }}
+            </div>
+            {{ form.submit(class="btn btn-outline-primary", value="Gerar chave") }}
+        </form>
+    </div>
+</div>
+
+{% if secret %}
+<div class="card mb-4 border-warning">
+    <div class="card-body">
+        <h5>2. Registre no app autenticador</h5>
+        <p class="text-muted">Adicione manualmente esta chave (sem QR nesta versão):</p>
+        <p><code>{{ secret }}</code></p>
+        {% if uri %}<p class="text-muted small">{{ uri }}</p>{% endif %}
+        {% if codes %}
+        <h5 class="mt-3">Backup codes (uso único — guarde agora)</h5>
+        <ul>
+            {% for code in codes %}<li><code>{{ code }}</code></li>{% endfor %}
+        </ul>
+        {% endif %}
+        <h5 class="mt-3">3. Confirme para ativar</h5>
+        <form method="POST" action="{{ url_for('auth.two_factor_confirm') }}">
+            {{ confirm_form.hidden_tag() }}
+            <div class="mb-3">
+                <label class="form-label">{{ confirm_form.senha_atual.label }}</label>
+                {{ confirm_form.senha_atual(class="form-control") }}
+            </div>
+            <div class="mb-3">
+                <label class="form-label">{{ confirm_form.codigo.label }}</label>
+                {{ confirm_form.codigo(class="form-control", placeholder="123456", autocomplete="one-time-code", inputmode="numeric") }}
+            </div>
+            {{ confirm_form.submit(class="btn btn-primary", value="Ativar 2FA") }}
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

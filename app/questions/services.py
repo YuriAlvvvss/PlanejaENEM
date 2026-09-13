@@ -17,19 +17,52 @@ def get_user_topics(user_id: int, subject_id: Optional[int] = None):
     return query.order_by(Topic.nome).all()
 
 
-def get_user_questions(user_id: int, subject_id: Optional[int] = None, topic_id: Optional[int] = None):
+def _escape_like(value: str) -> str:
+    """Escapa caracteres especiais para uso seguro em LIKE/ilike."""
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def get_user_questions(
+    user_id: int,
+    subject_id: Optional[int] = None,
+    topic_id: Optional[int] = None,
+    dificuldade: Optional[int] = None,
+    search: Optional[str] = None,
+):
+    """Lista questões do usuário com filtros opcionais (contrato preservado: retorna lista).
+
+    Filtros inválidos são ignorados (nunca levantam 500):
+    - dificuldade fora de 1-5 é ignorada
+    - search vazio é ignorado
+    """
     query = Question.query.filter_by(user_id=user_id)
     if subject_id is not None:
         query = query.filter_by(subject_id=subject_id)
     if topic_id is not None:
         query = query.filter_by(topic_id=topic_id)
+    if dificuldade is not None:
+        try:
+            dificuldade_int = int(dificuldade)
+        except (TypeError, ValueError):
+            dificuldade_int = None
+        if dificuldade_int is not None and 1 <= dificuldade_int <= 5:
+            query = query.filter_by(dificuldade=dificuldade_int)
+    if search:
+        cleaned = search.strip()
+        if cleaned:
+            like = f"%{_escape_like(cleaned)}%"
+            query = query.filter(Question.enunciado.ilike(like, escape="\\"))
     return query.order_by(Question.created_at.desc()).all()
 
 
-def create_topic(nome: str, subject_id: int, user_id: int) -> Topic:
+def create_topic(nome: str, subject_id: int, user_id: int, commit: bool = True) -> Topic:
+    subject = Subject.query.filter_by(id=subject_id, user_id=user_id).first()
+    if subject is None:
+        raise ValueError("Matéria não encontrada para este usuário.")
     topic = Topic(nome=nome, subject_id=subject_id, user_id=user_id)
     db.session.add(topic)
-    db.session.commit()
+    if commit:
+        db.session.commit()
     return topic
 
 
@@ -47,7 +80,19 @@ def create_question(
     dificuldade: int = 3,
     ano: Optional[int] = None,
     fonte: Optional[str] = None,
+    commit: bool = True,
 ) -> Question:
+    subject = Subject.query.filter_by(id=subject_id, user_id=user_id).first()
+    if subject is None:
+        raise ValueError("Matéria não encontrada para este usuário.")
+    if topic_id is not None:
+        topic = Topic.query.filter_by(
+            id=topic_id,
+            subject_id=subject_id,
+            user_id=user_id,
+        ).first()
+        if topic is None:
+            raise ValueError("Assunto não encontrado para esta matéria.")
     question = Question(
         enunciado=enunciado,
         alternativa_a=alternativa_a,
@@ -64,7 +109,8 @@ def create_question(
         fonte=fonte,
     )
     db.session.add(question)
-    db.session.commit()
+    if commit:
+        db.session.commit()
     return question
 
 
@@ -73,6 +119,7 @@ def record_attempt(
     question_id: int,
     resposta: str,
     tempo_segundos: Optional[int] = None,
+    commit: bool = True,
 ) -> QuestionAttempt:
     question = Question.query.filter_by(id=question_id, user_id=user_id).first()
     if question is None:
@@ -94,7 +141,8 @@ def record_attempt(
         tempo_segundos=tempo_segundos,
     )
     db.session.add(attempt)
-    db.session.commit()
+    if commit:
+        db.session.commit()
     return attempt
 
 

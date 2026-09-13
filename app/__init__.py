@@ -152,6 +152,42 @@ def migrate_legacy_database(app):
                 "weekly_goal_minutes",
                 "weekly_goal_minutes INTEGER NOT NULL DEFAULT 600",
             )
+            _add_missing_column(
+                connection,
+                "users",
+                "email_opt_in",
+                "email_opt_in BOOLEAN NOT NULL DEFAULT 0",
+            )
+            _add_missing_column(
+                connection,
+                "users",
+                "theme",
+                "theme VARCHAR(10) NOT NULL DEFAULT 'dark'",
+            )
+            _add_missing_column(
+                connection,
+                "users",
+                "density",
+                "density VARCHAR(12) NOT NULL DEFAULT 'comfortable'",
+            )
+            _add_missing_column(
+                connection,
+                "users",
+                "default_task_status",
+                "default_task_status VARCHAR(10) NOT NULL DEFAULT 'all'",
+            )
+            _add_missing_column(
+                connection,
+                "users",
+                "totp_secret",
+                "totp_secret VARCHAR(64)",
+            )
+            _add_missing_column(
+                connection,
+                "users",
+                "totp_enabled",
+                "totp_enabled BOOLEAN NOT NULL DEFAULT 0",
+            )
         if "tasks" in tables:
             _add_missing_column(connection, "tasks", "completed_at", "completed_at DATETIME")
             _add_missing_column(connection, "tasks", "next_review_date", "next_review_date DATE")

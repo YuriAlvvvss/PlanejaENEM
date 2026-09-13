@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='premium.css') }}">
 </head>
-<body class="{% if current_user.is_authenticated %}layout-app{% else %}layout-auth{% endif %}">
+<body class="{% if current_user.is_authenticated %}layout-app{% else %}layout-auth{% endif %}{% if current_user.is_authenticated and current_user.density == 'compact' %} density-compact{% endif %}" data-theme="{% if current_user.is_authenticated and current_user.theme in ['light', 'dark'] %}{{ current_user.theme }}{% else %}dark{% endif %}">
     {% if current_user.is_authenticated %}
     <aside class="app-sidebar" id="appSidebar">
         <a class="sidebar-brand" href="{{ url_for('main.dashboard') }}" title="PlanejaENEM">
@@ -41,6 +41,10 @@
                 <i class="bi bi-bar-chart-line"></i>
                 <span>Desempenho</span>
             </a>
+            <a class="sidebar-link {% if request.endpoint and request.endpoint.startswith('assessment.') %}is-active{% endif %}" href="{{ url_for('assessment.index') }}">
+                <i class="bi bi-clipboard-check"></i>
+                <span>Avaliação</span>
+            </a>
         </nav>
     </aside>
     <div class="app-main">
@@ -51,12 +55,12 @@
             <button class="sidebar-toggle sidebar-collapse-btn" type="button" data-sidebar-collapse aria-label="Recolher menu lateral" aria-expanded="true">
                 <i class="bi bi-chevron-double-left"></i>
             </button>
-            <form class="top-search" method="GET" action="{{ url_for('tasks.list_tasks') }}" role="search">
+            <form class="top-search" method="GET" action="{{ url_for('main.search') }}" role="search">
                 <i class="bi bi-search" aria-hidden="true"></i>
-                <input type="search" name="q" value="{{ request.args.get('q', '') }}" placeholder="Buscar tarefas e matérias" aria-label="Buscar">
+                <input type="search" name="q" value="{{ request.args.get('q', '') }}" placeholder="Buscar no PlanejaENEM" aria-label="Buscar">
             </form>
             <div class="topbar-user">
-                <button class="theme-toggle" type="button" data-theme-toggle aria-label="Alternar tema">
+                <button class="theme-toggle" type="button" data-theme-toggle data-endpoint="{{ url_for('auth.appearance') }}" data-csrf-token="{{ csrf_token() }}" aria-label="Alternar tema">
                     <i class="bi bi-moon-stars-fill theme-icon theme-icon--dark"></i>
                     <i class="bi bi-sun-fill theme-icon theme-icon--light"></i>
                 </button>

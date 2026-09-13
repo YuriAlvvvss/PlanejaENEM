@@ -6,14 +6,24 @@ and recent performance trends from QuestionAttempt data.
 """
 
 from collections import defaultdict
+from datetime import datetime
 from typing import Optional
 
 from app.models import Question, QuestionAttempt, Subject, Topic
 
 
-def get_overall_stats(user_id: int) -> dict:
-    total = QuestionAttempt.query.filter_by(user_id=user_id).count()
-    correct = QuestionAttempt.query.filter_by(user_id=user_id, correta=True).count()
+def _attempt_filters(user_id: int, since: Optional[datetime] = None):
+    """Filtros base de tentativa (preserva comportamento quando since=None)."""
+    filters = [QuestionAttempt.user_id == user_id]
+    if since is not None:
+        filters.append(QuestionAttempt.attempted_at >= since)
+    return filters
+
+
+def get_overall_stats(user_id: int, since: Optional[datetime] = None) -> dict:
+    base = _attempt_filters(user_id, since)
+    total = QuestionAttempt.query.filter(*base).count()
+    correct = QuestionAttempt.query.filter(*base).filter(QuestionAttempt.correta == True).count()
     wrong = total - correct
     accuracy = round((correct / total) * 100) if total > 0 else 0
 
@@ -25,7 +35,7 @@ def get_overall_stats(user_id: int) -> dict:
     }
 
 
-def get_subject_stats(user_id: int) -> list[dict]:
+def get_subject_stats(user_id: int, since: Optional[datetime] = None) -> list[dict]:
     subjects = Subject.query.filter_by(user_id=user_id).order_by(Subject.nome).all()
     result = []
     for subject in subjects:
@@ -34,12 +44,13 @@ def get_subject_stats(user_id: int) -> list[dict]:
         if not question_ids:
             continue
 
+        base = _attempt_filters(user_id, since)
         total = QuestionAttempt.query.filter(
-            QuestionAttempt.user_id == user_id,
+            *base,
             QuestionAttempt.question_id.in_(question_ids),
         ).count()
         correct = QuestionAttempt.query.filter(
-            QuestionAttempt.user_id == user_id,
+            *base,
             QuestionAttempt.question_id.in_(question_ids),
             QuestionAttempt.correta == True,
         ).count()
@@ -59,7 +70,7 @@ def get_subject_stats(user_id: int) -> list[dict]:
     return sorted(result, key=lambda x: x["accuracy"], reverse=True)
 
 
-def get_topic_stats(user_id: int, subject_id: Optional[int] = None) -> list[dict]:
+def get_topic_stats(user_id: int, subject_id: Optional[int] = None, since: Optional[datetime] = None) -> list[dict]:
     query = Topic.query.filter_by(user_id=user_id)
     if subject_id is not None:
         query = query.filter_by(subject_id=subject_id)
@@ -72,12 +83,13 @@ def get_topic_stats(user_id: int, subject_id: Optional[int] = None) -> list[dict
         if not question_ids:
             continue
 
+        base = _attempt_filters(user_id, since)
         total = QuestionAttempt.query.filter(
-            QuestionAttempt.user_id == user_id,
+            *base,
             QuestionAttempt.question_id.in_(question_ids),
         ).count()
         correct = QuestionAttempt.query.filter(
-            QuestionAttempt.user_id == user_id,
+            *base,
             QuestionAttempt.question_id.in_(question_ids),
             QuestionAttempt.correta == True,
         ).count()
@@ -97,14 +109,15 @@ def get_topic_stats(user_id: int, subject_id: Optional[int] = None) -> list[dict
     return sorted(result, key=lambda x: x["accuracy"], reverse=True)
 
 
-def get_difficulty_stats(user_id: int) -> list[dict]:
+def get_difficulty_stats(user_id: int, since: Optional[datetime] = None) -> list[dict]:
     questions = Question.query.filter_by(user_id=user_id).all()
     question_ids = [q.id for q in questions]
     if not question_ids:
         return []
 
+    base = _attempt_filters(user_id, since)
     attempts = QuestionAttempt.query.filter(
-        QuestionAttempt.user_id == user_id,
+        *base,
         QuestionAttempt.question_id.in_(question_ids),
     ).all()
 
@@ -135,9 +148,29 @@ def get_difficulty_stats(user_id: int) -> list[dict]:
     return result
 
 
-def get_recent_performance(user_id: int, limit: int = 20) -> dict:
+def get_recent_performance(
+    user_id: int,
+    limit: int = 20,
+    since: Optional[datetime] = None,
+    subject_id: Optional[int] = None,
+) -> dict:
+    base = _attempt_filters(user_id, since)
+    query = QuestionAttempt.query.filter(*base)
+    if subject_id is not None:
+        question_ids = [
+            q.id
+            for q in Question.query.filter_by(user_id=user_id, subject_id=subject_id).all()
+        ]
+        if not question_ids:
+            return {
+                "recent_accuracy": 0,
+                "recent_total": 0,
+                "recent_correct": 0,
+                "attempts": [],
+            }
+        query = query.filter(QuestionAttempt.question_id.in_(question_ids))
     attempts = (
-        QuestionAttempt.query.filter_by(user_id=user_id)
+        query
         .order_by(QuestionAttempt.attempted_at.desc())
         .limit(limit)
         .all()
@@ -176,8 +209,8 @@ def get_recent_performance(user_id: int, limit: int = 20) -> dict:
     }
 
 
-def get_best_worst_subject(user_id: int) -> tuple[Optional[dict], Optional[dict]]:
-    stats = get_subject_stats(user_id)
+def get_best_worst_subject(user_id: int, since: Optional[datetime] = None) -> tuple[Optional[dict], Optional[dict]]:
+    stats = get_subject_stats(user_id, since=since)
     if not stats:
         return None, None
     best = stats[0]
@@ -185,7 +218,7 @@ def get_best_worst_subject(user_id: int) -> tuple[Optional[dict], Optional[dict]
     return best, worst
 
 
-def get_area_stats(user_id: int) -> list[dict]:
+def get_area_stats(user_id: int, since: Optional[datetime] = None) -> list[dict]:
     subjects = Subject.query.filter_by(user_id=user_id).all()
     from app.areas import AREA_LABELS
 
@@ -197,12 +230,13 @@ def get_area_stats(user_id: int) -> list[dict]:
         if not question_ids:
             continue
 
+        base = _attempt_filters(user_id, since)
         total = QuestionAttempt.query.filter(
-            QuestionAttempt.user_id == user_id,
+            *base,
             QuestionAttempt.question_id.in_(question_ids),
         ).count()
         correct = QuestionAttempt.query.filter(
-            QuestionAttempt.user_id == user_id,
+            *base,
             QuestionAttempt.question_id.in_(question_ids),
             QuestionAttempt.correta == True,
         ).count()

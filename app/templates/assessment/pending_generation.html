@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Avaliação #{{ assessment.id }} - PlanejaENEM{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="eyebrow">Avaliação #{{ assessment.id }}</div>
+        <h2>Sem questão no banco</h2>
+    </div>
+    <a href="{{ url_for('assessment.index') }}" class="btn btn-outline-secondary btn-sm">Voltar</a>
+</div>
+
+<div class="workspace-empty">
+    <h5>Banco esgotado para este tópico e dificuldade</h5>
+    <p class="text-muted">A IA está desligada ou não gerou questão válida. Gere questões em Questões e volte.</p>
+    <a href="{{ url_for('questions.list_questions') }}" class="btn btn-primary">Gerar com IA</a>
+    <form method="POST" action="{{ url_for('assessment.abandon', assessment_id=assessment.id) }}" class="d-inline ms-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-outline-secondary">Abandonar avaliação</button>
+    </form>
+</div>
+{% endblock %}

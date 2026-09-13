@@ -2,13 +2,20 @@
 {% block title %}Dashboard - PlanejaENEM{% endblock %}
 
 {% macro task_item(task, show_date=true) %}
-<a class="routine-item" href="{{ url_for('tasks.edit', id=task.id) }}">
-    <span class="board-dot" style="background: {{ task.subject.cor }};"></span>
-    <span class="routine-item-body">
+<div class="routine-item">
+    <form method="POST" action="{{ url_for('tasks.toggle', id=task.id) }}" class="m-0 flex-shrink-0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="next" value="{{ url_for('main.dashboard') }}">
+        <button type="submit" class="btn btn-sm {% if task.concluida %}btn-success{% else %}btn-outline-success{% endif %} py-0 px-2" title="{% if task.concluida %}Reabrir{% else %}Concluir{% endif %}" aria-label="{% if task.concluida %}Reabrir {{ task.titulo }}{% else %}Concluir {{ task.titulo }}{% endif %}">
+            {% if task.concluida %}✓{% else %}○{% endif %}
+        </button>
+    </form>
+    <span class="board-dot flex-shrink-0" style="background: {{ task.subject.cor }};"></span>
+    <a href="{{ url_for('tasks.edit', id=task.id) }}" class="routine-item-body text-decoration-none text-reset">
         <strong>{{ task.titulo }}</strong>
         <small>{{ task.subject.nome }}{% if show_date and task.data_prevista %} · {{ task.data_prevista.strftime('%d/%m') }}{% endif %}</small>
-    </span>
-</a>
+    </a>
+</div>
 {% endmacro %}
 
 {% block content %}
@@ -135,8 +142,9 @@
     <!-- Mapa de Domínio -->
     {% if mastery_map %}
     <div class="card mb-4">
-        <div class="card-header">
+        <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Mapa de Domínio</h5>
+            <a href="{{ url_for('performance.overview') }}" class="btn btn-outline-primary btn-sm">Ver desempenho</a>
         </div>
         <div class="card-body">
             <div class="table-responsive">
@@ -148,6 +156,7 @@
                             <th>Área</th>
                             <th>Domínio</th>
                             <th>Nível</th>
+                            <th>Tendência</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -174,6 +183,11 @@
                                 {% elif item.mastery_level == 'medium' %}<span class="text-info">Médio</span>
                                 {% elif item.mastery_level == 'good' %}<span class="text-success">Bom</span>
                                 {% else %}<span class="text-success">Excelente</span>{% endif %}
+                            </td>
+                            <td>
+                                {% if item.trend == 'improving' %}<span class="badge bg-success">↗</span>
+                                {% elif item.trend == 'declining' %}<span class="badge bg-danger">↘</span>
+                                {% else %}<span class="badge bg-light text-dark border">→</span>{% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -222,6 +236,34 @@
     </div>
     {% endif %}
 
+    {% if badges %}
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Conquistas</h5>
+            <small class="text-muted">{{ badges|selectattr('earned')|list|length }}/{{ badges|length }}</small>
+        </div>
+        <div class="card-body">
+            <div class="row g-2">
+                {% for badge in badges %}
+                <div class="col-6 col-md-3">
+                    <div class="border rounded p-2 text-center h-100 {% if badge.earned %}border-success bg-success bg-opacity-10{% else %}text-muted{% endif %}">
+                        <div class="fw-semibold small">{{ badge.label }}</div>
+                        <small class="{% if badge.earned %}text-success{% else %}text-muted{% endif %}">{{ badge.detail }}</small>
+                        <div class="mt-1">
+                            {% if badge.earned %}
+                            <span class="badge bg-success">Conquistada</span>
+                            {% else %}
+                            <span class="badge bg-light text-dark border">Bloqueada</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="routine-grid">
         <section class="routine-card">
             <header>
@@ -235,6 +277,7 @@
             {% else %}
             <p class="routine-empty">Nenhuma tarefa para hoje.</p>
             {% endif %}
+            <a href="{{ url_for('tasks.list_tasks', periodo='hoje') }}" class="btn btn-outline-secondary btn-sm mt-2">Ver todas</a>
         </section>
         <section class="routine-card">
             <header>
@@ -248,6 +291,7 @@
             {% else %}
             <p class="routine-empty">Nenhuma tarefa atrasada.</p>
             {% endif %}
+            <a href="{{ url_for('tasks.list_tasks', periodo='atrasadas') }}" class="btn btn-outline-secondary btn-sm mt-2">Ver todas</a>
         </section>
         <section class="routine-card">
             <header>
@@ -270,6 +314,7 @@
             {% else %}
             <p class="routine-empty">Conclua tarefas para gerar revisões automáticas.</p>
             {% endif %}
+            <a href="{{ url_for('tasks.list_tasks', status='done') }}" class="btn btn-outline-secondary btn-sm mt-2">Ver concluídas</a>
         </section>
         <section class="routine-card">
             <header>
@@ -283,6 +328,7 @@
             {% else %}
             <p class="routine-empty">Sem tarefas futuras nesta janela.</p>
             {% endif %}
+            <a href="{{ url_for('tasks.list_tasks', periodo='14d') }}" class="btn btn-outline-secondary btn-sm mt-2">Ver todas</a>
         </section>
     </div>
 
@@ -325,6 +371,7 @@
         {% else %}
         <p class="routine-empty mb-0">Nenhuma sessão no cronograma para hoje. Gere o plano em Cronograma e marque as sessões como estudadas para contar horas concluídas e o streak.</p>
         {% endif %}
+        <a href="{{ url_for('planner.planner') }}" class="btn btn-outline-secondary btn-sm mt-2">Ver cronograma</a>
     </section>
 </div>
 {% endblock %}

@@ -353,10 +353,15 @@ def test_subject_isolation_by_user(client):
     login(client, "ana@example.com", "Senha123")
     response = client.get("/subjects/")
     assert response.status_code == 200
-    # User should only see their own subjects
+    # User should only see their own subjects (12 official auto-provisioned
+    # + custom ones; "Matemática"/"História" already exist in the catalog).
     subjects = Subject.query.filter_by(user_id=user1.id).all()
-    assert len(subjects) == 1
-    assert subjects[0].nome == "Matemática"
+    assert all(s.user_id == user1.id for s in subjects)
+    assert subject2.id not in {s.id for s in subjects}
+    assert any(s.nome == "Matemática" for s in subjects)
+    # Rendered page must not link to the other user's subject.
+    assert f"/subjects/{subject2.id}/edit" not in response.data.decode()
+    assert subject1.id not in {s.id for s in Subject.query.filter_by(user_id=user2.id).all()}
 
 
 def test_edit_subject_updates_correctly(client):

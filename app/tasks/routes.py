@@ -1,8 +1,8 @@
-from datetime import date
+from datetime import date, timedelta
 
 from flask import current_app, flash, jsonify, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 from app.authz import get_user_task
 from app.extensions import db
@@ -51,9 +51,28 @@ def _select_recommendation_subject(subjects, user_id):
 @tasks_bp.route("/")
 @login_required
 def list_tasks():
-    filter_status = request.args.get("status", "all")
+    # ?status= explícito sempre vence (URL compartilhável); sem ele, usa o
+    # filtro inicial do perfil com fallback "all" (contas antigas/valores legados).
+    if "status" in request.args:
+        filter_status = (request.args.get("status") or "all").strip().lower()
+    else:
+        pref = (getattr(current_user, "default_task_status", "all") or "all").strip().lower()
+        filter_status = pref
+    if filter_status not in {"all", "pending", "done"}:
+        filter_status = "all"
     filter_subject = request.args.get("subject", type=int)
+    filter_periodo = (request.args.get("periodo") or "all").strip().lower()
+    if filter_periodo not in {"all", "hoje", "atrasadas", "7d", "14d", "sem_data"}:
+        filter_periodo = "all"
     search_query = (request.args.get("q") or "").strip()
+    page = request.args.get("page", default=1, type=int) or 1
+    per_page = request.args.get("per_page", default=20, type=int) or 20
+    page = max(1, page)
+    per_page = min(50, max(5, per_page))
+    today = date.today()
+
+    def _escape_like(value: str) -> str:
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
     query = Task.query.filter_by(user_id=current_user.id)
 
@@ -66,20 +85,62 @@ def list_tasks():
         query = query.filter_by(subject_id=filter_subject)
 
     if search_query:
-        like = f"%{search_query}%"
-        query = query.filter(Task.titulo.ilike(like))
+        like = f"%{_escape_like(search_query)}%"
+        query = query.filter(
+            or_(
+                Task.titulo.ilike(like, escape="\\"),
+                Task.descricao.ilike(like, escape="\\"),
+            )
+        )
 
-    tasks = query.order_by(Task.data_prevista.asc().nullslast()).all()
+    if filter_periodo == "hoje":
+        query = query.filter(Task.data_prevista == today)
+    elif filter_periodo == "atrasadas":
+        query = query.filter(
+            Task.concluida.is_(False),
+            Task.data_prevista.is_not(None),
+            Task.data_prevista < today,
+        )
+    elif filter_periodo == "7d":
+        query = query.filter(
+            Task.data_prevista.is_not(None),
+            Task.data_prevista > today,
+            Task.data_prevista <= today + timedelta(days=7),
+        )
+    elif filter_periodo == "14d":
+        query = query.filter(
+            Task.data_prevista.is_not(None),
+            Task.data_prevista > today,
+            Task.data_prevista <= today + timedelta(days=14),
+        )
+    elif filter_periodo == "sem_data":
+        query = query.filter(Task.data_prevista.is_(None))
+
+    all_tasks = query.order_by(Task.data_prevista.asc().nullslast()).all()
+    total = len(all_tasks)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = min(page, total_pages)
+    start = (page - 1) * per_page
+    tasks = all_tasks[start:start + per_page]
+    pending_count = sum(1 for t in all_tasks if not t.concluida)
+    done_count = total - pending_count
     subjects = Subject.query.filter_by(user_id=current_user.id).order_by(Subject.nome).all()
 
     return render_template(
         "tasks/list.html",
         tasks=tasks,
+        total_tasks=total,
+        pending_count=pending_count,
+        done_count=done_count,
         subjects=subjects,
         filter_status=filter_status,
         filter_subject=filter_subject,
+        filter_periodo=filter_periodo,
         search_query=search_query,
-        today=date.today(),
+        page=page,
+        per_page=per_page,
+        total_pages=total_pages,
+        today=today,
     )
 
 

@@ -2,12 +2,13 @@ from datetime import UTC, datetime, timezone
 
 from flask import flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
+from sqlalchemy import or_
 
 from app.authz import get_user_session
 from app.extensions import db
 from app.main import main_bp
 from app.main.stats import build_dashboard_stats
-from app.models import Task
+from app.models import Question, Subject, Task, Topic
 
 
 def _safe_next_url(default_endpoint="main.dashboard"):
@@ -22,6 +23,57 @@ def _safe_next_url(default_endpoint="main.dashboard"):
 def dashboard():
     stats = build_dashboard_stats(current_user)
     return render_template("dashboard.html", **stats)
+
+
+@main_bp.route("/search")
+@login_required
+def search():
+    search_query = (request.args.get("q") or "").strip()
+    result_type = (request.args.get("type") or "all").strip().lower()
+    if result_type not in {"all", "subject", "topic", "task", "question"}:
+        result_type = "all"
+    results = {
+        "subjects": [],
+        "topics": [],
+        "tasks": [],
+        "questions": [],
+    }
+
+    def _escape_like(value: str) -> str:
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+    if search_query:
+        like = f"%{_escape_like(search_query)}%"
+        escape_clause = {"escape": "\\"}
+        if result_type in {"all", "subject"}:
+            results["subjects"] = Subject.query.filter(
+                Subject.user_id == current_user.id,
+                Subject.nome.ilike(like, **escape_clause),
+            ).order_by(Subject.nome).limit(25).all()
+        if result_type in {"all", "topic"}:
+            results["topics"] = Topic.query.filter(
+                Topic.user_id == current_user.id,
+                Topic.nome.ilike(like, **escape_clause),
+            ).order_by(Topic.nome).limit(25).all()
+        if result_type in {"all", "task"}:
+            results["tasks"] = Task.query.filter(
+                Task.user_id == current_user.id,
+                or_(Task.titulo.ilike(like, **escape_clause), Task.descricao.ilike(like, **escape_clause)),
+            ).order_by(Task.data_prevista.asc().nullslast()).limit(25).all()
+        if result_type in {"all", "question"}:
+            results["questions"] = Question.query.filter(
+                Question.user_id == current_user.id,
+                Question.enunciado.ilike(like, **escape_clause),
+            ).order_by(Question.created_at.desc()).limit(25).all()
+
+    total_results = sum(len(items) for items in results.values())
+    return render_template(
+        "search.html",
+        search_query=search_query,
+        result_type=result_type,
+        results=results,
+        total_results=total_results,
+    )
 
 
 @main_bp.route("/weekly-goal", methods=["POST"])
@@ -73,15 +125,13 @@ def toggle_session(id):
             if next_review:
                 task.next_review_date = next_review
 
-        try:
+        if study_session.topic_id:
             from app.performance.services import update_knowledge_state
             update_knowledge_state(
                 user_id=current_user.id,
-                subject_id=study_session.subject_id,
                 topic_id=study_session.topic_id,
+                commit=False,
             )
-        except Exception:
-            pass
 
     db.session.commit()
     status = "concluída" if study_session.completed else "reaberta"

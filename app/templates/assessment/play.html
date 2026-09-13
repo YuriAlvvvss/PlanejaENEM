@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Avaliação #{{ assessment.id }} - PlanejaENEM{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="eyebrow">Avaliação #{{ assessment.id }} — questão {{ pending.order }}/{{ assessment.target_questions }}</div>
+        <h2>{{ pending.order }} de {{ assessment.target_questions }}</h2>
+    </div>
+    <div class="d-flex gap-2">
+        <span class="badge bg-light text-dark border">Dificuldade {{ pending.target_difficulty }}</span>
+        <form method="POST" action="{{ url_for('assessment.abandon', assessment_id=assessment.id) }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-secondary btn-sm">Abandonar</button>
+        </form>
+    </div>
+</div>
+
+<div class="progress mb-3" style="height: 8px;">
+    <div class="progress-bar" style="width: {{ (pending.order / assessment.target_questions * 100) | round }}%;"></div>
+</div>
+
+{% if pending.decision_reason %}
+<div class="alert alert-info"><strong>Por quê esta questão?</strong> {{ pending.decision_reason }}</div>
+{% endif %}
+
+<div class="auth-shell">
+    <div class="auth-card card" style="max-width: 800px;">
+        <div class="card-body">
+            <div class="mb-3 d-flex flex-wrap gap-1 align-items-center">
+                <span class="badge bg-secondary">{{ question.subject.nome if question.subject else '' }}</span>
+                {% if question.topic %}<span class="badge bg-secondary">{{ question.topic.nome }}</span>{% endif %}
+                <span class="badge bg-light text-dark border">Dificuldade {{ question.dificuldade }}/5</span>
+            </div>
+            <div class="question-prompt mb-4"><div class="card-body">
+                <p class="mb-0" style="white-space: pre-wrap;">{{ question.enunciado }}</p>
+            </div></div>
+
+            <form method="POST" action="{{ url_for('assessment.respond', assessment_id=assessment.id) }}" data-question-answer-form>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="assessment_question_id" value="{{ pending.id }}">
+                <input type="hidden" name="tempo_segundos" id="answerTime" value="0">
+                <div class="mb-4">
+                    <div class="answer-heading">
+                        <label class="form-label fw-bold mb-0">Alternativas</label>
+                        <span class="answer-timer" data-answer-timer aria-live="off">00:00</span>
+                    </div>
+                    <div class="answer-options">
+                        {% for alt_letter, alt_text in [('A', question.alternativa_a), ('B', question.alternativa_b), ('C', question.alternativa_c), ('D', question.alternativa_d), ('E', question.alternativa_e)] %}
+                        <label class="answer-option" for="answer_{{ alt_letter }}">
+                            <input class="answer-option__input" type="radio" name="resposta" value="{{ alt_letter }}" id="answer_{{ alt_letter }}" required>
+                            <span class="answer-option__letter">{{ alt_letter }}</span>
+                            <span class="answer-option__text">{{ alt_text }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg">Confirmar resposta</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='question-answer.js') }}"></script>
+{% endblock %}

@@ -235,6 +235,7 @@ def update_knowledge_state(
     user_id: int,
     topic_id: int,
     now: Optional[datetime] = None,
+    commit: bool = True,
 ) -> KnowledgeState:
     """
     Atualiza o KnowledgeState de um tópico baseado nas tentativas.
@@ -244,9 +245,9 @@ def update_knowledge_state(
     """
     now = now or datetime.now(timezone.utc)
 
-    topic = db.session.get(Topic, topic_id)
+    topic = Topic.query.filter_by(id=topic_id, user_id=user_id).first()
     if topic is None:
-        raise ValueError(f"Topic {topic_id} not found")
+        raise ValueError(f"Topic {topic_id} not found for user {user_id}")
 
     # Buscar ou criar KnowledgeState
     ks = KnowledgeState.query.filter_by(
@@ -297,7 +298,8 @@ def update_knowledge_state(
     ks.trend = trend
     ks.updated_at = now
 
-    db.session.commit()
+    if commit:
+        db.session.commit()
 
     return ks
 
@@ -326,8 +328,10 @@ def update_all_knowledge_states(
 
     updated = []
     for topic_id in topic_ids:
-        ks = update_knowledge_state(user_id, topic_id, now)
+        ks = update_knowledge_state(user_id, topic_id, now, commit=False)
         updated.append(ks)
+
+    db.session.commit()
 
     return updated
 

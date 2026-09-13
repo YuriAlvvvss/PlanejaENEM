@@ -1,8 +1,25 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const savedTheme = localStorage.getItem("planejaenem-theme") || "dark";
+    const serverTheme = document.body.getAttribute("data-theme") === "light" ? "light" : "dark";
+    const savedTheme = localStorage.getItem("planejaenem-theme") || serverTheme;
     document.body.setAttribute("data-theme", savedTheme);
 
     const themeToggle = document.querySelector("[data-theme-toggle]");
+    const persistTheme = (theme) => {
+        try {
+            const endpoint = themeToggle && themeToggle.dataset.endpoint;
+            const csrfToken = themeToggle && themeToggle.dataset.csrfToken;
+            if (!endpoint || !csrfToken) {
+                return;
+            }
+            fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({ theme, csrf_token: csrfToken }),
+            }).catch(() => {});
+        } catch (error) {
+            /* preferência local já aplicada; servidor sincroniza depois */
+        }
+    };
     const applyThemeState = () => {
         const theme = document.body.getAttribute("data-theme");
         const isDark = theme === "dark";
@@ -18,6 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const nextTheme = document.body.getAttribute("data-theme") === "dark" ? "light" : "dark";
             document.body.setAttribute("data-theme", nextTheme);
             localStorage.setItem("planejaenem-theme", nextTheme);
+            persistTheme(nextTheme);
             applyThemeState();
         });
     }

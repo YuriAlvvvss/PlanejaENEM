@@ -733,19 +733,14 @@ class TestRecommendationIntegration:
             db.session.add_all([q1, q2])
             db.session.commit()
 
-            for _ in range(8):
-                attempt = QuestionAttempt(
-                    user_id=user, question_id=q1.id,
-                    resposta="A", correta=True, tempo_segundos=20,
-                )
-                db.session.add(attempt)
-
-            for _ in range(8):
-                attempt = QuestionAttempt(
-                    user_id=user, question_id=q2.id,
-                    resposta="B", correta=False, tempo_segundos=40,
-                )
-                db.session.add(attempt)
+            db.session.add(QuestionAttempt(
+                user_id=user, question_id=q1.id,
+                resposta="A", correta=True, tempo_segundos=20,
+            ))
+            db.session.add(QuestionAttempt(
+                user_id=user, question_id=q2.id,
+                resposta="B", correta=False, tempo_segundos=40,
+            ))
             db.session.commit()
 
             update_knowledge_state(user, topic1.id)

@@ -15,6 +15,12 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, index=True, nullable=False)
     senha_hash = db.Column(db.String(256), nullable=False)
     weekly_goal_minutes = db.Column(db.Integer, nullable=False, default=600)
+    email_opt_in = db.Column(db.Boolean, nullable=False, default=False)
+    theme = db.Column(db.String(10), nullable=False, default="dark")
+    density = db.Column(db.String(12), nullable=False, default="comfortable")
+    default_task_status = db.Column(db.String(10), nullable=False, default="all")
+    totp_secret = db.Column(db.String(64), nullable=True)
+    totp_enabled = db.Column(db.Boolean, nullable=False, default=False)
     data_criacao = db.Column(
         db.DateTime, default=lambda: datetime.now(timezone.utc)
     )
@@ -67,7 +73,7 @@ class PasswordResetToken(db.Model):
     @staticmethod
     def hash_token(token):
         from werkzeug.security import generate_password_hash
-        return generate_password_hash(token, method="sha256")
+        return generate_password_hash(token, method="pbkdf2:sha256")
 
     def check_token(self, token):
         return check_password_hash(self.token_hash, token)
@@ -77,6 +83,39 @@ class PasswordResetToken(db.Model):
 
     def __repr__(self):
         return f"<PasswordResetToken user_id={self.user_id}>"
+
+
+class TwoFactorBackupCode(db.Model):
+    """Backup codes de 2FA (uso único, hash como PasswordResetToken)."""
+
+    __tablename__ = "two_factor_backup_codes"
+    __table_args__ = (
+        db.Index("idx_2fa_code_user_id", "user_id"),
+        db.Index("idx_2fa_code_user_used", "user_id", "used"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    code_hash = db.Column(db.String(256), nullable=False)
+    used = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    user = db.relationship("User", backref=db.backref("backup_codes", lazy=True, cascade="all, delete-orphan"))
+
+    @staticmethod
+    def generate_code():
+        return secrets.token_hex(4)
+
+    @staticmethod
+    def hash_code(code):
+        from werkzeug.security import generate_password_hash
+        return generate_password_hash(code, method="pbkdf2:sha256")
+
+    def check_code(self, code):
+        return check_password_hash(self.code_hash, code)
+
+    def __repr__(self):
+        return f"<TwoFactorBackupCode user_id={self.user_id} used={self.used}>"
 
 
 class Subject(db.Model):

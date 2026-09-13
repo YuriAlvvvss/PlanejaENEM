@@ -18,3 +18,4 @@ from flask import Blueprint
 assessment_bp = Blueprint("assessment", __name__, url_prefix="/assessment")
 
 from app.assessment import routes  # noqa: E402, F401
+from app.assessment import web  # noqa: E402, F401

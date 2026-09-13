@@ -80,32 +80,72 @@
 <div class="card mb-4">
     <div class="card-body">
         <form method="GET" class="row g-2 align-items-end">
-            <div class="col-md-4">
-                <label class="form-label small">Matéria</label>
-                <select name="subject" class="form-select form-select-sm" data-auto-submit>
+            <div class="col-md-3">
+                <label class="form-label small" for="filter-subject">Matéria</label>
+                <select id="filter-subject" name="subject" class="form-select form-select-sm" data-auto-submit>
                     <option value="">Todas</option>
                     {% for subject in subjects %}
                     <option value="{{ subject.id }}" {% if filter_subject == subject.id %}selected{% endif %}>{{ subject.nome }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-4">
-                <label class="form-label small">Assunto</label>
-                <select name="topic" class="form-select form-select-sm" data-auto-submit>
+            <div class="col-md-3">
+                <label class="form-label small" for="filter-topic">Assunto</label>
+                <select id="filter-topic" name="topic" class="form-select form-select-sm" data-auto-submit>
                     <option value="">Todos</option>
                     {% for topic in topics %}
                     <option value="{{ topic.id }}" {% if filter_topic == topic.id %}selected{% endif %}>{{ topic.nome }}</option>
                     {% endfor %}
                 </select>
             </div>
+            <div class="col-md-2">
+                <label class="form-label small" for="filter-status">Status</label>
+                <select id="filter-status" name="status" class="form-select form-select-sm" data-auto-submit>
+                    <option value="all" {% if filter_status == 'all' %}selected{% endif %}>Todas</option>
+                    <option value="pending" {% if filter_status == 'pending' %}selected{% endif %}>Pendentes</option>
+                    <option value="done" {% if filter_status == 'done' %}selected{% endif %}>Concluídas</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small" for="filter-dificuldade">Dificuldade</label>
+                <select id="filter-dificuldade" name="dificuldade" class="form-select form-select-sm" data-auto-submit>
+                    <option value="">Todas</option>
+                    {% for level in [1, 2, 3, 4, 5] %}
+                    <option value="{{ level }}" {% if filter_dificuldade == level %}selected{% endif %}>{{ level }}/5</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small" for="filter-q">Buscar</label>
+                <input id="filter-q" type="search" name="q" value="{{ search_query }}" class="form-control form-control-sm" placeholder="Enunciado...">
+            </div>
+            <div class="col-12 d-flex gap-2 mt-2">
+                <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+                <a href="{{ url_for('questions.list_questions') }}" class="btn btn-outline-secondary btn-sm">Limpar</a>
+            </div>
         </form>
     </div>
 </div>
 
-{% if questions %}
-<div class="d-flex gap-2 mb-3">
-    <span class="badge bg-warning text-dark">{{ pending_questions|length }} pendente(s)</span>
-    <span class="badge bg-secondary">{{ answered_questions|length }} concluída(s)</span>
+{% if total_questions is defined and total_questions == 0 %}
+<div class="empty-state text-center">
+    <h5 class="text-muted">Nenhuma questão encontrada</h5>
+    <p class="text-muted mb-2">
+        {% if search_query or filter_status != 'all' or filter_dificuldade or filter_subject or filter_topic %}Ajuste os filtros ou{% else %}Clique em <strong>Gerar com IA</strong> ou ajuste os filtros.{% endif %}
+    </p>
+    {% if search_query or filter_status != 'all' or filter_dificuldade or filter_subject or filter_topic %}
+    <p class="text-muted mb-0"><a href="{{ url_for('questions.list_questions') }}">Limpar filtros</a> para ver tudo.</p>
+    {% else %}
+    <p class="text-muted mb-0">Crie questões ou ajuste os filtros.</p>
+    {% endif %}
+</div>
+{% elif questions %}
+<div class="d-flex gap-2 mb-3 flex-wrap">
+    <span class="badge bg-warning text-dark">{{ pending_count if pending_count is defined else pending_questions|length }} pendente(s)</span>
+    <span class="badge bg-secondary">{{ answered_count if answered_count is defined else answered_questions|length }} concluída(s)</span>
+    {% if total_pages is defined and total_pages > 1 %}
+    <span class="badge bg-light text-dark border">Página {{ page }} de {{ total_pages }}</span>
+    {% endif %}
 </div>
 
 <h5 class="mb-2">Pendentes ({{ pending_questions|length }})</h5>
@@ -117,6 +157,7 @@
                 <th>Enunciado</th>
                 <th>Matéria</th>
                 <th>Assunto</th>
+                <th>Dificuldade</th>
                 <th>Status</th>
                 <th>Ações</th>
             </tr>
@@ -132,6 +173,7 @@
                     </span>
                 </td>
                 <td>{{ q.topic.nome if q.topic else "-" }}</td>
+                <td><span class="badge bg-light text-dark border">{{ q.dificuldade }}/5</span></td>
                 <td>
                     <span class="badge bg-warning text-dark">Pendente</span>
                 </td>
@@ -159,6 +201,7 @@
                 <th>Enunciado</th>
                 <th>Matéria</th>
                 <th>Assunto</th>
+                <th>Dificuldade</th>
                 <th>Status</th>
                 <th>Ações</th>
             </tr>
@@ -174,6 +217,7 @@
                     </span>
                 </td>
                 <td>{{ q.topic.nome if q.topic else "-" }}</td>
+                <td><span class="badge bg-light text-dark border">{{ q.dificuldade }}/5</span></td>
                 <td>
                     {% if att and att.correta %}
                     <span class="badge bg-success">Acertou</span>
@@ -194,6 +238,20 @@
 </div>
 {% else %}
 <p class="text-muted">Você ainda não concluiu nenhuma questão.</p>
+{% endif %}
+
+{% if total_pages is defined and total_pages > 1 %}
+<nav aria-label="Paginação de questões" class="mt-3">
+    <ul class="pagination pagination-sm mb-0">
+        <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('questions.list_questions', subject=filter_subject, topic=filter_topic, status=filter_status, dificuldade=filter_dificuldade, q=search_query, page=page-1, per_page=per_page) }}">Anterior</a>
+        </li>
+        <li class="page-item disabled"><span class="page-link">Página {{ page }} de {{ total_pages }}</span></li>
+        <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('questions.list_questions', subject=filter_subject, topic=filter_topic, status=filter_status, dificuldade=filter_dificuldade, q=search_query, page=page+1, per_page=per_page) }}">Próxima</a>
+        </li>
+    </ul>
+</nav>
 {% endif %}
 {% else %}
 <div class="empty-state text-center">

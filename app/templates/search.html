@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Busca - PlanejaENEM{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="eyebrow">Busca global</div>
+        <h2>Resultados{% if search_query %} para “{{ search_query }}”{% endif %}</h2>
+    </div>
+</div>
+
+<form class="row g-2 mb-4" method="GET" action="{{ url_for('main.search') }}">
+    <div class="col-md-8">
+        <label class="visually-hidden" for="global-search">Buscar</label>
+        <input id="global-search" class="form-control" type="search" name="q" value="{{ search_query }}" placeholder="Digite uma busca" required>
+    </div>
+    <div class="col-md-3">
+        <label class="visually-hidden" for="search-type">Tipo</label>
+        <select id="search-type" class="form-select" name="type">
+            <option value="all" {% if result_type == "all" %}selected{% endif %}>Tudo</option>
+            <option value="subject" {% if result_type == "subject" %}selected{% endif %}>Matérias</option>
+            <option value="topic" {% if result_type == "topic" %}selected{% endif %}>Assuntos</option>
+            <option value="task" {% if result_type == "task" %}selected{% endif %}>Tarefas</option>
+            <option value="question" {% if result_type == "question" %}selected{% endif %}>Questões</option>
+        </select>
+    </div>
+    <div class="col-md-1 d-grid">
+        <button class="btn btn-primary" type="submit" title="Buscar" aria-label="Buscar">
+            <i class="bi bi-search" aria-hidden="true"></i>
+        </button>
+    </div>
+</form>
+
+{% if not search_query %}
+<div class="workspace-empty">
+    <h5>Encontre algo no seu espaço de estudos</h5>
+    <p>Busque por matérias, assuntos, tarefas ou questões.</p>
+</div>
+{% elif not total_results %}
+<div class="workspace-empty">
+    <h5>Nenhum resultado encontrado</h5>
+    <p>Tente outro termo ou altere o tipo de conteúdo.</p>
+</div>
+{% else %}
+<div class="row g-4">
+    {% if results.subjects %}
+    <section class="col-md-6">
+        <h5>Matérias</h5>
+        <div class="list-group">
+            {% for subject in results.subjects %}
+            <a class="list-group-item list-group-item-action" href="{{ url_for('subjects.edit', id=subject.id) }}">
+                <span class="legend-dot" style="background-color: {{ subject.cor }};"></span> {{ subject.nome }}
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+    {% if results.topics %}
+    <section class="col-md-6">
+        <h5>Assuntos</h5>
+        <div class="list-group">
+            {% for topic in results.topics %}
+            <a class="list-group-item list-group-item-action" href="{{ url_for('questions.edit_topic', id=topic.id) }}">{{ topic.nome }} <small class="text-muted">{{ topic.subject.nome }}</small></a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+    {% if results.tasks %}
+    <section class="col-md-6">
+        <h5>Tarefas</h5>
+        <div class="list-group">
+            {% for task in results.tasks %}
+            <a class="list-group-item list-group-item-action" href="{{ url_for('tasks.edit', id=task.id) }}">{{ task.titulo }} <small class="text-muted">{{ task.subject.nome }}</small></a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+    {% if results.questions %}
+    <section class="col-md-6">
+        <h5>Questões</h5>
+        <div class="list-group">
+            {% for question in results.questions %}
+            <a class="list-group-item list-group-item-action" href="{{ url_for('questions.view_question', id=question.id) }}">{{ question.enunciado|truncate(160) }}</a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

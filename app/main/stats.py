@@ -1,8 +1,11 @@
 from datetime import date, datetime, timedelta, timezone
+import logging
 
 from app.areas import AREA_LABELS, area_label, infer_area
-from app.models import StudyPlan, StudySession, Subject, Task, QuestionAttempt, Question
+from app.models import StudyPlan, StudySession, Subject, Task, QuestionAttempt, Question, Topic
 from app.performance.models import KnowledgeState
+
+logger = logging.getLogger(__name__)
 
 REVIEW_INTERVAL_DAYS = 7
 WEEK_COUNT = 8
@@ -66,6 +69,61 @@ def compute_streak(activity_dates, today):
         streak += 1
         cursor -= timedelta(days=1)
     return streak
+
+
+# Limiares de conquistas (somente leitura; sem persistência nesta fase).
+BADGE_STREAK_3 = 3
+BADGE_STREAK_7 = 7
+BADGE_STREAK_14 = 14
+BADGE_QUESTIONS_10 = 10
+BADGE_QUESTIONS_50 = 50
+BADGE_ACCURACY_MIN_ATTEMPTS = 10
+BADGE_ACCURACY_THRESHOLD = 80
+BADGE_EXPLORER_TOPICS = 5
+BADGE_EXPERT_MASTERY = 90
+
+
+def compute_badges(streak=0, total_attempts=0, question_accuracy=0, mastery_map=None):
+    """Conquistas derivadas de métricas existentes (pura, sem DB).
+
+    Limiares fixos acima; conta nova recebe tudo bloqueado.
+    """
+    mastery_map = mastery_map or []
+    expert = any(
+        (item.get("mastery_score") or 0) >= BADGE_EXPERT_MASTERY
+        for item in mastery_map
+    )
+
+    def _badge(key, label, detail, earned):
+        return {
+            "key": key,
+            "label": label,
+            "detail": detail,
+            "earned": bool(earned),
+        }
+
+    return [
+        _badge("streak_3", "3 dias seguidos", f"{streak}/{BADGE_STREAK_3} dias",
+               streak >= BADGE_STREAK_3),
+        _badge("streak_7", "7 dias seguidos", f"{streak}/{BADGE_STREAK_7} dias",
+               streak >= BADGE_STREAK_7),
+        _badge("streak_14", "14 dias seguidos", f"{streak}/{BADGE_STREAK_14} dias",
+               streak >= BADGE_STREAK_14),
+        _badge("questions_10", "10 questões", f"{total_attempts}/{BADGE_QUESTIONS_10}",
+               total_attempts >= BADGE_QUESTIONS_10),
+        _badge("questions_50", "50 questões", f"{total_attempts}/{BADGE_QUESTIONS_50}",
+               total_attempts >= BADGE_QUESTIONS_50),
+        _badge("sharpshooter", "Mira afiada (80%)",
+               f"{question_accuracy}% (mín. {BADGE_ACCURACY_MIN_ATTEMPTS} tentativas)",
+               total_attempts >= BADGE_ACCURACY_MIN_ATTEMPTS
+               and question_accuracy >= BADGE_ACCURACY_THRESHOLD),
+        _badge("explorer", "Explorador (5 assuntos)",
+               f"{len(mastery_map)}/{BADGE_EXPLORER_TOPICS} assuntos",
+               len(mastery_map) >= BADGE_EXPLORER_TOPICS),
+        _badge("expert", "Expert (90% em 1 assunto)",
+               "1 assunto com domínio ≥90%" if expert else "nenhum assunto ≥90% ainda",
+               expert),
+    ]
 
 
 def _minutes_in_range(sessions, start, end, completed_only=False):
@@ -242,11 +300,11 @@ def build_dashboard_stats(user, today=None):
     mastery_map = []
     knowledge_states = KnowledgeState.query.filter_by(user_id=user.id).all()
     for ks in knowledge_states:
-        subject = Subject.query.get(ks.subject_id)
-        topic = None
-        if ks.topic_id:
-            from app.models import Topic
-            topic = Topic.query.get(ks.topic_id)
+        subject = Subject.query.filter_by(id=ks.subject_id, user_id=user.id).first()
+        topic = Topic.query.filter_by(
+            id=ks.topic_id,
+            user_id=user.id,
+        ).first() if ks.topic_id else None
         
         mastery_level = "critical"
         if ks.mastery_score >= 90:
@@ -274,7 +332,7 @@ def build_dashboard_stats(user, today=None):
             from app.decision_engine.engine import get_current_recommendations
             current_recommendation = get_current_recommendations(user.id, today)
         except Exception:
-            pass
+            logger.exception("Falha ao montar recomendacao do dashboard", extra={"user_id": user.id})
 
     return {
         "today": today,
@@ -304,6 +362,12 @@ def build_dashboard_stats(user, today=None):
         "correct_attempts": correct_attempts,
         "question_accuracy": question_accuracy,
         "mastery_map": mastery_map,
+        "badges": compute_badges(
+            streak=streak,
+            total_attempts=total_attempts,
+            question_accuracy=question_accuracy,
+            mastery_map=mastery_map,
+        ),
         "current_recommendation": current_recommendation,
     }
 

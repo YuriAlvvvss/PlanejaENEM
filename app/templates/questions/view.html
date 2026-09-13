@@ -15,19 +15,25 @@
                 </div>
             </div>
 
-            <div class="mb-3">
+            <div class="mb-3 d-flex flex-wrap gap-1 align-items-center">
                 <span class="status-pill" style="background-color: {{ question.subject.cor }}22; color: {{ question.subject.cor }};">
                     {{ question.subject.nome }}
                 </span>
                 {% if question.topic %}
                 <span class="badge bg-secondary ms-1">{{ question.topic.nome }}</span>
                 {% endif %}
+                <span class="badge bg-light text-dark border ms-1" title="Dificuldade">Dificuldade {{ question.dificuldade }}/5</span>
                 {% if question.ano %}
                 <span class="badge bg-secondary ms-1">{{ question.ano }}</span>
                 {% endif %}
                 {% if question.fonte %}
                 <span class="badge bg-secondary ms-1">{{ question.fonte }}</span>
                 {% endif %}
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <a href="{{ url_for('questions.list_questions', subject=question.subject_id, topic=question.topic_id) }}" class="btn btn-outline-secondary btn-sm">Ver similares</a>
+                <a href="{{ url_for('questions.list_questions', subject=question.subject_id) }}" class="btn btn-outline-secondary btn-sm">Mais desta matéria</a>
             </div>
 
             <div class="question-prompt mb-4">

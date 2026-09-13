@@ -13,11 +13,10 @@ Todos os endpoints exigem login.
 IDs são validados contra o usuário logado (anti-IDOR).
 """
 
-from flask import Blueprint, jsonify, request
+from flask import jsonify, request
 from flask_login import login_required, current_user
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 
+from app.assessment import assessment_bp
 from app.extensions import limiter
 from app.assessment.services import (
     complete_assessment,
@@ -28,12 +27,8 @@ from app.assessment.services import (
     submit_answer,
 )
 
-assessment_routes = Blueprint(
-    "assessment_routes", __name__
-)
 
-
-@assessment_routes.route("/start", methods=["POST"])
+@assessment_bp.route("/start", methods=["POST"])
 @login_required
 @limiter.limit("10/minute")
 def api_start_assessment():
@@ -63,7 +58,7 @@ def api_start_assessment():
         return jsonify({"success": False, "error": str(e)}), 400
 
 
-@assessment_routes.route("/<int:assessment_id>/next", methods=["GET"])
+@assessment_bp.route("/<int:assessment_id>/next", methods=["GET"])
 @login_required
 @limiter.limit("30/minute")
 def api_get_next_question(assessment_id: int):
@@ -78,7 +73,7 @@ def api_get_next_question(assessment_id: int):
         return jsonify({"success": False, "error": str(e)}), 400
 
 
-@assessment_routes.route("/<int:assessment_id>/answer", methods=["POST"])
+@assessment_bp.route("/<int:assessment_id>/answer", methods=["POST"])
 @login_required
 @limiter.limit("60/minute")
 def api_submit_answer(assessment_id: int):
@@ -115,7 +110,7 @@ def api_submit_answer(assessment_id: int):
         return jsonify({"success": False, "error": str(e)}), 400
 
 
-@assessment_routes.route("/<int:assessment_id>/complete", methods=["POST"])
+@assessment_bp.route("/<int:assessment_id>/complete", methods=["POST"])
 @login_required
 @limiter.limit("5/minute")
 def api_complete_assessment(assessment_id: int):
@@ -130,7 +125,7 @@ def api_complete_assessment(assessment_id: int):
         return jsonify({"success": False, "error": str(e)}), 400
 
 
-@assessment_routes.route("/<int:assessment_id>/status", methods=["GET"])
+@assessment_bp.route("/<int:assessment_id>/status", methods=["GET"])
 @login_required
 @limiter.limit("30/minute")
 def api_get_status(assessment_id: int):
@@ -145,7 +140,7 @@ def api_get_status(assessment_id: int):
         return jsonify({"success": False, "error": str(e)}), 400
 
 
-@assessment_routes.route("/list", methods=["GET"])
+@assessment_bp.route("/list", methods=["GET"])
 @login_required
 @limiter.limit("20/minute")
 def api_list_assessments():
@@ -156,8 +151,14 @@ def api_list_assessments():
         status: str (active/completed/abandoned, opcional)
         limit: int (default 20)
     """
-    status = request.args.get("status")
-    limit = request.args.get("limit", 20, type=int)
+    status = (request.args.get("status") or "").strip().lower() or None
+    if status is not None and status not in {"active", "completed", "abandoned"}:
+        status = None
+    try:
+        limit = int(request.args.get("limit", 20))
+    except (TypeError, ValueError):
+        limit = 20
+    limit = max(1, min(100, limit))
 
     assessments = list_user_assessments(
         user_id=current_user.id,

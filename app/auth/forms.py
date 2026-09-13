@@ -87,3 +87,40 @@ class ResetPasswordForm(FlaskForm):
         validators=[DataRequired(), EqualTo("nova_senha", message="As senhas não conferem.")],
     )
     submit = SubmitField("Redefinir senha")
+
+
+class TwoFactorVerifyForm(FlaskForm):
+    codigo = StringField("Código", validators=[DataRequired(), Length(min=6, max=12)])
+    submit = SubmitField("Verificar")
+
+    def validate_codigo(self, field):
+        field.data = (field.data or "").strip().replace(" ", "")
+        if not field.data:
+            raise ValidationError("Informe o código de 6 dígitos ou um backup code.")
+
+
+class TwoFactorSetupForm(FlaskForm):
+    senha_atual = PasswordField("Senha atual", validators=[DataRequired()])
+    submit = SubmitField("Gerar chave")
+
+
+class TwoFactorConfirmForm(FlaskForm):
+    senha_atual = PasswordField("Senha atual", validators=[DataRequired()])
+    codigo = StringField("Código do app", validators=[DataRequired(), Length(min=6, max=8)])
+    submit = SubmitField("Ativar 2FA")
+
+    def validate_codigo(self, field):
+        field.data = (field.data or "").strip().replace(" ", "")
+        if not field.data:
+            raise ValidationError("Informe o código do app.")
+
+
+class TwoFactorDisableForm(FlaskForm):
+    senha_atual = PasswordField("Senha atual", validators=[DataRequired()])
+    codigo = StringField("Código atual ou backup", validators=[DataRequired(), Length(min=6, max=12)])
+    submit = SubmitField("Desativar 2FA")
+
+    def validate_codigo(self, field):
+        field.data = (field.data or "").strip().replace(" ", "")
+        if not field.data:
+            raise ValidationError("Informe o código atual.")

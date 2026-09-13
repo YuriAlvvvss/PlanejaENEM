@@ -59,7 +59,7 @@ def recommendations():
 
     if plan is None:
         flash("Crie um plano de estudo primeiro.", "warning")
-        return redirect(url_for("planner.index"))
+        return redirect(url_for("planner.planner"))
 
     availability = _get_availability_from_plan(plan)
 
@@ -133,7 +133,7 @@ def debug():
 
     if plan is None:
         flash("Crie um plano de estudo primeiro.", "warning")
-        return redirect(url_for("planner.index"))
+        return redirect(url_for("planner.planner"))
 
     availability = _get_availability_from_plan(plan)
 
@@ -176,7 +176,7 @@ def simulate():
 
     if plan is None:
         flash("Crie um plano de estudo primeiro.", "warning")
-        return redirect(url_for("planner.index"))
+        return redirect(url_for("planner.planner"))
 
     availability_a = WeeklyAvailability(
         days=plan.days_list,
@@ -225,13 +225,39 @@ def simulate():
 @login_required
 def history():
     """
-    Histórico de recomendações e sessões.
+    Histórico de recomendações e sessões (paginado, só leitura).
     """
-    limit = request.args.get("limit", 50, type=int)
+    try:
+        page = int(request.args.get("page", 1))
+    except (TypeError, ValueError):
+        page = 1
+    # Compat: ?limit= antigo vira per_page quando page/per_page ausentes.
+    if request.args.get("per_page") is None and request.args.get("limit") is not None:
+        try:
+            per_page = int(request.args.get("limit"))
+        except (TypeError, ValueError):
+            per_page = 20
+    else:
+        try:
+            per_page = int(request.args.get("per_page", 20))
+        except (TypeError, ValueError):
+            per_page = 20
+    page = max(1, page)
+    per_page = max(5, min(50, per_page))
 
-    history_data = get_recommendation_history(current_user.id, limit)
+    # Teto seguro; sessões são poucas por usuário.
+    history_data = get_recommendation_history(current_user.id, 200)
+    total = len(history_data)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = min(page, total_pages)
+    start = (page - 1) * per_page
+    page_items = history_data[start:start + per_page]
 
     return render_template(
         "decision_engine/history.html",
-        history=history_data,
+        history=page_items,
+        total=total,
+        page=page,
+        per_page=per_page,
+        total_pages=total_pages,
     )

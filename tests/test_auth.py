@@ -220,7 +220,9 @@ def test_subject_catalog_and_dashboard_summary(client):
     response = client.get("/subjects/")
     assert response.status_code == 200
     assert Subject.query.filter_by(nome="Matemática", user_id=user.id).count() == 1
-    assert client.post("/subjects/new", follow_redirects=True).status_code == 404
+    create_response = client.get("/subjects/new")
+    assert create_response.status_code == 200
+    assert "Nome da Matéria" in create_response.data.decode()
 
     dashboard = client.get("/")
     assert dashboard.status_code == 200

@@ -1,7 +1,14 @@
 """
-Tests for the questions module.
+Tests for the questions module (PlanejaENEM 5.x rules).
 
-Covers topic CRUD, question CRUD, answering questions,
+Current rules (source of truth):
+- Manual question CRUD via routes is DISABLED (AI-only creation):
+  GET/POST /questions/new and /<id>/edit return 404.
+- Answering is SINGLE-attempt (uq_attempt_user_question).
+- Topics keep full CRUD per subject.
+- Subjects are auto-provisioned (12 official) at registration.
+
+Covers topic CRUD, service-level question creation, answering,
 statistics computation, IDOR protection, and multi-user isolation.
 """
 
@@ -10,6 +17,7 @@ from datetime import datetime, timezone
 
 from app import create_app, db
 from app.models import User, Subject, Topic, Question, QuestionAttempt
+from app.questions.services import create_question as service_create_question
 
 
 @pytest.fixture
@@ -67,23 +75,22 @@ def _create_topic(client, subject_id, nome="Funcoes"):
     return Topic.query.filter_by(nome=nome).first()
 
 
-def _create_question(client, subject_id, topic_id=None, resposta_correta="A"):
-    data = {
-        "enunciado": "Quanto e 2 + 2?",
-        "alternativa_a": "4",
-        "alternativa_b": "3",
-        "alternativa_c": "5",
-        "alternativa_d": "6",
-        "alternativa_e": "7",
-        "resposta_correta": resposta_correta,
-        "subject_id": str(subject_id),
-        "dificuldade": "3",
-        "topic_id": "0",
-    }
-    if topic_id:
-        data["topic_id"] = str(topic_id)
-    client.post("/questions/new", data=data, follow_redirects=True)
-    return Question.query.filter_by(enunciado="Quanto e 2 + 2?").first()
+def _make_question(subject_id, user_id, topic_id=None, resposta_correta="A",
+                   enunciado="Quanto e 2 + 2?", dificuldade=3):
+    """Create a question via the service layer (routes are AI-only, 404)."""
+    return service_create_question(
+        enunciado=enunciado,
+        alternativa_a="4",
+        alternativa_b="3",
+        alternativa_c="5",
+        alternativa_d="6",
+        alternativa_e="7",
+        resposta_correta=resposta_correta,
+        subject_id=subject_id,
+        user_id=user_id,
+        topic_id=topic_id,
+        dificuldade=dificuldade,
+    )
 
 
 def test_manual_question_creation_is_disabled(client):
@@ -93,6 +100,18 @@ def test_manual_question_creation_is_disabled(client):
     response = client.get("/questions/new")
 
     assert response.status_code == 404
+
+
+def test_manual_question_edit_is_disabled(client):
+    _create_user(client, "a@test.com")
+    _login(client, "a@test.com")
+    user = User.query.filter_by(email="a@test.com").first()
+    subject = _create_subject(client)
+    q = _make_question(subject.id, user.id)
+
+    assert client.get(f"/questions/{q.id}/edit").status_code == 404
+    assert client.post(f"/questions/{q.id}/edit", data={}).status_code == 404
+    assert db.session.get(Question, q.id).enunciado == "Quanto e 2 + 2?"
 
 
 class TestTopicCRUD:
@@ -113,8 +132,16 @@ class TestTopicCRUD:
         assert resp.subject_id == subject.id
 
     def test_create_topic_no_subject_redirects(self, client):
-        _create_user(client, "a@test.com")
-        _login(client, "a@test.com")
+        # User WITHOUT auto-provisioned subjects (created directly in DB).
+        user = User(nome="NoSub", email="nosub@test.com")
+        user.set_senha("Senha123")
+        db.session.add(user)
+        db.session.commit()
+        client.post(
+            "/auth/login",
+            data={"email": "nosub@test.com", "senha": "Senha123"},
+            follow_redirects=True,
+        )
         resp = client.get("/questions/topics/new", follow_redirects=True)
         assert b"Crie uma mat" in resp.data
 
@@ -150,39 +177,39 @@ class TestQuestionCRUD:
         assert resp.status_code == 200
         assert "Nenhuma" in resp.data.decode()
 
-    def test_create_question(self, client):
-        _create_user(client, "a@test.com")
+    def test_create_question_via_service(self, client):
+        user = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject = _create_subject(client)
-        q = _create_question(client, subject.id)
+        q = _make_question(subject.id, user.id)
         assert q is not None
         assert q.enunciado == "Quanto e 2 + 2?"
         assert q.resposta_correta == "A"
         assert q.user_id == User.query.filter_by(email="a@test.com").first().id
 
     def test_create_question_with_topic(self, client):
-        _create_user(client, "a@test.com")
+        user = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject = _create_subject(client)
         topic = _create_topic(client, subject.id, nome="Algebra")
-        q = _create_question(client, subject.id, topic_id=topic.id)
+        q = _make_question(subject.id, user.id, topic_id=topic.id)
         assert q is not None
         assert q.topic_id == topic.id
 
     def test_view_question(self, client):
-        _create_user(client, "a@test.com")
+        user = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject = _create_subject(client)
-        q = _create_question(client, subject.id)
+        q = _make_question(subject.id, user.id)
         resp = client.get(f"/questions/{q.id}")
         assert resp.status_code == 200
         assert "Quanto e 2 + 2?" in resp.data.decode()
 
-    def test_edit_question(self, client):
-        _create_user(client, "a@test.com")
+    def test_edit_question_route_is_disabled(self, client):
+        user = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject = _create_subject(client)
-        q = _create_question(client, subject.id)
+        q = _make_question(subject.id, user.id)
         resp = client.post(
             f"/questions/{q.id}/edit",
             data={
@@ -199,15 +226,14 @@ class TestQuestionCRUD:
             },
             follow_redirects=True,
         )
-        assert resp.status_code == 200
-        updated = db.session.get(Question, q.id)
-        assert updated.enunciado == "Quanto e 3 + 3?"
+        assert resp.status_code == 404
+        assert db.session.get(Question, q.id).enunciado == "Quanto e 2 + 2?"
 
     def test_delete_question(self, client):
-        _create_user(client, "a@test.com")
+        user = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject = _create_subject(client)
-        q = _create_question(client, subject.id)
+        q = _make_question(subject.id, user.id)
         resp = client.post(f"/questions/{q.id}/delete", follow_redirects=True)
         assert resp.status_code == 200
         assert db.session.get(Question, q.id) is None
@@ -215,10 +241,10 @@ class TestQuestionCRUD:
 
 class TestAnswerQuestion:
     def test_answer_correct(self, client):
-        _create_user(client, "a@test.com")
+        user = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject = _create_subject(client)
-        q = _create_question(client, subject.id, resposta_correta="A")
+        q = _make_question(subject.id, user.id, resposta_correta="A")
         resp = client.post(
             f"/questions/{q.id}/answer",
             data={"resposta": "A", "tempo_segundos": "30"},
@@ -235,10 +261,10 @@ class TestAnswerQuestion:
         assert attempt.tempo_segundos == 30
 
     def test_answer_incorrect(self, client):
-        _create_user(client, "a@test.com")
+        user = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject = _create_subject(client)
-        q = _create_question(client, subject.id, resposta_correta="A")
+        q = _make_question(subject.id, user.id, resposta_correta="A")
         resp = client.post(
             f"/questions/{q.id}/answer",
             data={"resposta": "B"},
@@ -253,10 +279,10 @@ class TestAnswerQuestion:
         assert attempt.resposta == "B"
 
     def test_answer_without_time(self, client):
-        _create_user(client, "a@test.com")
+        user = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject = _create_subject(client)
-        q = _create_question(client, subject.id)
+        q = _make_question(subject.id, user.id)
         resp = client.post(
             f"/questions/{q.id}/answer",
             data={"resposta": "A"},
@@ -268,17 +294,19 @@ class TestAnswerQuestion:
         ).first()
         assert attempt.tempo_segundos is None
 
-    def test_multiple_attempts_allowed(self, client):
-        _create_user(client, "a@test.com")
+    def test_single_attempt_is_enforced(self, client):
+        """Second attempt is blocked: warning shown, still exactly 1 attempt."""
+        user = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject = _create_subject(client)
-        q = _create_question(client, subject.id, resposta_correta="A")
+        q = _make_question(subject.id, user.id, resposta_correta="A")
         client.post(f"/questions/{q.id}/answer", data={"resposta": "A"}, follow_redirects=True)
-        client.post(f"/questions/{q.id}/answer", data={"resposta": "B"}, follow_redirects=True)
-        client.post(f"/questions/{q.id}/answer", data={"resposta": "A"}, follow_redirects=True)
+        resp = client.post(f"/questions/{q.id}/answer", data={"resposta": "B"}, follow_redirects=True)
+        assert "foi respondida" in resp.data.decode()
         user = User.query.filter_by(email="a@test.com").first()
-        count = QuestionAttempt.query.filter_by(user_id=user.id, question_id=q.id).count()
-        assert count == 3
+        attempts = QuestionAttempt.query.filter_by(user_id=user.id, question_id=q.id).all()
+        assert len(attempts) == 1
+        assert attempts[0].resposta == "A"
 
 
 class TestIDORProtection:
@@ -286,7 +314,7 @@ class TestIDORProtection:
         user_a = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject_a = _create_subject(client, "MatA")
-        q = _create_question(client, subject_a.id)
+        q = _make_question(subject_a.id, user_a.id)
 
         _logout(client)
         _create_user(client, "b@test.com")
@@ -298,7 +326,7 @@ class TestIDORProtection:
         user_a = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject_a = _create_subject(client, "MatA")
-        q = _create_question(client, subject_a.id)
+        q = _make_question(subject_a.id, user_a.id)
 
         _logout(client)
         _create_user(client, "b@test.com")
@@ -310,7 +338,7 @@ class TestIDORProtection:
         user_a = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject_a = _create_subject(client, "MatA")
-        q = _create_question(client, subject_a.id)
+        q = _make_question(subject_a.id, user_a.id)
 
         _logout(client)
         _create_user(client, "b@test.com")
@@ -322,7 +350,7 @@ class TestIDORProtection:
         user_a = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject_a = _create_subject(client, "MatA")
-        q = _create_question(client, subject_a.id)
+        q = _make_question(subject_a.id, user_a.id)
 
         _logout(client)
         _create_user(client, "b@test.com")
@@ -359,7 +387,7 @@ class TestIDORProtection:
         user_a = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject_a = _create_subject(client, "MatA")
-        _create_question(client, subject_a.id)
+        _make_question(subject_a.id, user_a.id)
 
         _logout(client)
         _create_user(client, "b@test.com")
@@ -390,28 +418,13 @@ class TestStatistics:
         assert stats["accuracy"] == 0
 
     def test_overall_stats_with_attempts(self, client):
-        _create_user(client, "a@test.com")
+        user = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject = _create_subject(client, "MatA")
-        q1 = _create_question(client, subject.id, resposta_correta="A")
-        q2_enunciado = "Quanto e 3 + 3?"
-        client.post(
-            "/questions/new",
-            data={
-                "enunciado": q2_enunciado,
-                "alternativa_a": "5",
-                "alternativa_b": "6",
-                "alternativa_c": "7",
-                "alternativa_d": "8",
-                "alternativa_e": "9",
-                "resposta_correta": "B",
-                "subject_id": str(subject.id),
-                "topic_id": "0",
-                "dificuldade": "3",
-            },
-            follow_redirects=True,
+        q1 = _make_question(subject.id, user.id, resposta_correta="A")
+        q2 = _make_question(
+            subject.id, user.id, resposta_correta="B", enunciado="Quanto e 3 + 3?"
         )
-        q2 = Question.query.filter_by(enunciado=q2_enunciado).first()
         client.post(f"/questions/{q1.id}/answer", data={"resposta": "A"}, follow_redirects=True)
         client.post(f"/questions/{q2.id}/answer", data={"resposta": "A"}, follow_redirects=True)
 
@@ -424,10 +437,10 @@ class TestStatistics:
         assert stats["accuracy"] == 50
 
     def test_subject_stats(self, client):
-        _create_user(client, "a@test.com")
+        user = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject = _create_subject(client, "MatStats")
-        q = _create_question(client, subject.id, resposta_correta="A")
+        q = _make_question(subject.id, user.id, resposta_correta="A")
         client.post(f"/questions/{q.id}/answer", data={"resposta": "A"}, follow_redirects=True)
 
         from app.performance.statistics import get_subject_stats
@@ -438,10 +451,10 @@ class TestStatistics:
         assert stats[0]["subject_nome"] == "MatStats"
 
     def test_difficulty_stats(self, client):
-        _create_user(client, "a@test.com")
+        user = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject = _create_subject(client, "MatDiff")
-        q = _create_question(client, subject.id, resposta_correta="A")
+        q = _make_question(subject.id, user.id, resposta_correta="A")
         client.post(f"/questions/{q.id}/answer", data={"resposta": "A"}, follow_redirects=True)
 
         from app.performance.statistics import get_difficulty_stats
@@ -452,11 +465,11 @@ class TestStatistics:
         assert stats[0]["accuracy"] == 100
 
     def test_topic_stats(self, client):
-        _create_user(client, "a@test.com")
+        user = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject = _create_subject(client, "MatTopic")
         topic = _create_topic(client, subject.id, nome="Algebra")
-        q = _create_question(client, subject.id, topic_id=topic.id, resposta_correta="A")
+        q = _make_question(subject.id, user.id, topic_id=topic.id, resposta_correta="A")
         client.post(f"/questions/{q.id}/answer", data={"resposta": "A"}, follow_redirects=True)
 
         from app.performance.statistics import get_topic_stats
@@ -466,10 +479,10 @@ class TestStatistics:
         assert stats[0]["accuracy"] == 100
 
     def test_recent_performance(self, client):
-        _create_user(client, "a@test.com")
+        user = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject = _create_subject(client, "MatRecent")
-        q = _create_question(client, subject.id, resposta_correta="A")
+        q = _make_question(subject.id, user.id, resposta_correta="A")
         client.post(f"/questions/{q.id}/answer", data={"resposta": "A"}, follow_redirects=True)
 
         from app.performance.statistics import get_recent_performance
@@ -480,10 +493,10 @@ class TestStatistics:
         assert perf["recent_accuracy"] == 100
 
     def test_best_worst_subject(self, client):
-        _create_user(client, "a@test.com")
+        user = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject = _create_subject(client, "MatBest")
-        q = _create_question(client, subject.id, resposta_correta="A")
+        q = _make_question(subject.id, user.id, resposta_correta="A")
         client.post(f"/questions/{q.id}/answer", data={"resposta": "A"}, follow_redirects=True)
 
         from app.performance.statistics import get_best_worst_subject
@@ -494,10 +507,10 @@ class TestStatistics:
         assert best["accuracy"] == 100
 
     def test_area_stats(self, client):
-        _create_user(client, "a@test.com")
+        user = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject = _create_subject(client, "MatArea")
-        q = _create_question(client, subject.id, resposta_correta="A")
+        q = _make_question(subject.id, user.id, resposta_correta="A")
         client.post(f"/questions/{q.id}/answer", data={"resposta": "A"}, follow_redirects=True)
 
         from app.performance.statistics import get_area_stats
@@ -509,7 +522,7 @@ class TestStatistics:
         user_a = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject_a = _create_subject(client, "MatIso")
-        q = _create_question(client, subject_a.id, resposta_correta="A")
+        q = _make_question(subject_a.id, user_a.id, resposta_correta="A")
         client.post(f"/questions/{q.id}/answer", data={"resposta": "A"}, follow_redirects=True)
 
         _logout(client)
@@ -538,10 +551,10 @@ class TestPerformanceRoutes:
         assert "Nenhum dado" in resp.data.decode()
 
     def test_overview_with_data(self, client):
-        _create_user(client, "a@test.com")
+        user = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject = _create_subject(client, "MatPerf")
-        q = _create_question(client, subject.id, resposta_correta="A")
+        q = _make_question(subject.id, user.id, resposta_correta="A")
         client.post(f"/questions/{q.id}/answer", data={"resposta": "A"}, follow_redirects=True)
         resp = client.get("/performance/")
         assert resp.status_code == 200
@@ -549,8 +562,8 @@ class TestPerformanceRoutes:
 
 
 class TestFormValidation:
-    def test_question_requires_enunciado(self, client):
-        _create_user(client, "a@test.com")
+    def test_manual_creation_is_disabled_even_without_enunciado(self, client):
+        user = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject = _create_subject(client, "MatVal")
         resp = client.post(
@@ -569,14 +582,15 @@ class TestFormValidation:
             },
             follow_redirects=True,
         )
+        assert resp.status_code == 404
         user = User.query.filter_by(email="a@test.com").first()
         assert Question.query.filter_by(user_id=user.id).count() == 0
 
     def test_answer_requires_selection(self, client):
-        _create_user(client, "a@test.com")
+        user = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject = _create_subject(client, "MatVal2")
-        q = _create_question(client, subject.id)
+        q = _make_question(subject.id, user.id)
         resp = client.post(f"/questions/{q.id}/answer", data={}, follow_redirects=True)
         user = User.query.filter_by(email="a@test.com").first()
         assert QuestionAttempt.query.filter_by(user_id=user.id).count() == 0
@@ -593,8 +607,8 @@ class TestFormValidation:
         user = User.query.filter_by(email="a@test.com").first()
         assert Topic.query.filter_by(user_id=user.id).count() == 0
 
-    def test_question_with_invalid_resposta_correta(self, client):
-        _create_user(client, "a@test.com")
+    def test_manual_creation_is_disabled_even_with_invalid_choice(self, client):
+        user = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject = _create_subject(client, "MatVal4")
         resp = client.post(
@@ -613,16 +627,17 @@ class TestFormValidation:
             },
             follow_redirects=True,
         )
+        assert resp.status_code == 404
         user = User.query.filter_by(email="a@test.com").first()
         assert Question.query.filter_by(user_id=user.id).count() == 0
 
 
 class TestDashboardIntegration:
     def test_dashboard_shows_question_stats(self, client):
-        _create_user(client, "a@test.com")
+        user = _create_user(client, "a@test.com")
         _login(client, "a@test.com")
         subject = _create_subject(client, "MatDash")
-        q = _create_question(client, subject.id, resposta_correta="A")
+        q = _make_question(subject.id, user.id, resposta_correta="A")
         client.post(f"/questions/{q.id}/answer", data={"resposta": "A"}, follow_redirects=True)
         resp = client.get("/")
         assert resp.status_code == 200

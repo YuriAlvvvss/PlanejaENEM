@@ -150,7 +150,21 @@ def start_assessment(
         ValueError: Se parâmetros são inválidos.
     """
     # Validar parâmetros
+    try:
+        target_questions = int(target_questions)
+    except (TypeError, ValueError):
+        target_questions = 10
     target_questions = max(5, min(30, target_questions))
+
+    # Validar subject_id pertence ao usuário (ignora filtro inválido? não — rejeita).
+    if subject_id is not None:
+        try:
+            subject_id = int(subject_id)
+        except (TypeError, ValueError):
+            raise ValueError("Matéria inválida")
+        subject = Subject.query.filter_by(id=subject_id, user_id=user_id).first()
+        if subject is None:
+            raise ValueError("Matéria não encontrada")
 
     # Verificar se háKnowledgeStates suficientes
     knowledge_states = _get_knowledge_states_as_dicts(user_id)
@@ -407,11 +421,33 @@ def submit_answer(
     if aq.resposta is not None:
         raise ValueError("Questão já foi respondida")
 
+    # Validar resposta e tempo (server é a fonte; client é hint).
+    if not isinstance(resposta, str) or resposta.upper() not in {"A", "B", "C", "D", "E"}:
+        raise ValueError("Resposta deve ser A, B, C, D ou E")
+    resposta = resposta.upper()
+    try:
+        tempo_segundos = int(tempo_segundos) if tempo_segundos is not None else None
+    except (TypeError, ValueError):
+        tempo_segundos = None
+    if tempo_segundos is not None:
+        tempo_segundos = max(0, min(3600, tempo_segundos))
+    # Teto pelo tempo real desde a apresentação (tolerância 30s de rede).
+    if tempo_segundos is not None and aq.presented_at is not None:
+        try:
+            presented = aq.presented_at
+            if presented.tzinfo is None:
+                presented = presented.replace(tzinfo=timezone.utc)
+            real_elapsed = int((datetime.now(timezone.utc) - presented).total_seconds())
+            if real_elapsed >= 0 and tempo_segundos > real_elapsed + 30:
+                tempo_segundos = max(0, min(3600, real_elapsed))
+        except Exception:
+            pass
+
     # Verificar correção
-    correta = _check_answer(aq, resposta.upper())
+    correta = _check_answer(aq, resposta)
 
     # Atualizar AssessmentQuestion
-    aq.resposta = resposta.upper()
+    aq.resposta = resposta
     aq.correta = correta
     aq.tempo_segundos = tempo_segundos
     aq.answered_at = datetime.now(timezone.utc)
@@ -434,30 +470,40 @@ def submit_answer(
         assessment.status = "completed"
         assessment.completed_at = datetime.now(timezone.utc)
 
-    # Atualizar KnowledgeState do tópico (antes do commit principal)
-    ks_updated = False
+    # Espelhar em QuestionAttempt sem violar tentativa única (P0):
+    # se o usuário já respondeu a Question fora da avaliação, reutiliza.
+    ks_topic_id = None
     if aq.topic_id and aq.question_id:
         from app.models import QuestionAttempt
-        attempt = QuestionAttempt(
-            user_id=user_id,
-            question_id=aq.question_id,
-            resposta=resposta.upper(),
-            correta=correta,
-            tempo_segundos=tempo_segundos,
-        )
-        db.session.add(attempt)
-        ks_updated = True
+        existing = QuestionAttempt.query.filter_by(
+            user_id=user_id, question_id=aq.question_id
+        ).first()
+        if existing is None:
+            attempt = QuestionAttempt(
+                user_id=user_id,
+                question_id=aq.question_id,
+                resposta=resposta,
+                correta=correta,
+                tempo_segundos=tempo_segundos,
+            )
+            db.session.add(attempt)
+        ks_topic_id = aq.topic_id
 
     db.session.commit()
 
-    if ks_updated:
-        update_knowledge_state(user_id, aq.topic_id)
+    if ks_topic_id is not None:
+        try:
+            update_knowledge_state(user_id, ks_topic_id)
+        except ValueError:
+            logger.warning(
+                "KnowledgeState não atualizado: topic=%s user=%s", ks_topic_id, user_id
+            )
 
     # Montar resultado
     result = {
         "assessment_question_id": aq.id,
         "order": aq.order,
-        "resposta": resposta.upper(),
+        "resposta": resposta,
         "correta": correta,
         "tempo_segundos": tempo_segundos,
         "assessment_progress": {
@@ -601,12 +647,28 @@ def list_user_assessments(
     user_id: int,
     status: Optional[str] = None,
     limit: int = 20,
+    offset: int = 0,
 ) -> list[dict]:
-    """Lista avaliações do usuário."""
+    """Lista avaliações do usuário (offset opcional, default preserva contrato)."""
+    try:
+        limit = int(limit)
+    except (TypeError, ValueError):
+        limit = 20
+    try:
+        offset = int(offset)
+    except (TypeError, ValueError):
+        offset = 0
+    limit = max(1, min(100, limit))
+    offset = max(0, offset)
     query = Assessment.query.filter_by(user_id=user_id)
     if status:
         query = query.filter_by(status=status)
-    assessments = query.order_by(Assessment.created_at.desc()).limit(limit).all()
+    assessments = (
+        query.order_by(Assessment.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
     return [a.to_dict() for a in assessments]
 
 

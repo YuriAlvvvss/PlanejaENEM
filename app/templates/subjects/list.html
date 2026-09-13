@@ -7,6 +7,9 @@
         <div class="eyebrow">Organização</div>
         <h2>Matérias</h2>
     </div>
+    <a href="{{ url_for('subjects.create') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg" aria-hidden="true"></i> Nova matéria
+    </a>
 </div>
 
 {% if subjects %}
@@ -31,7 +34,17 @@
 
                                 <small class="text-muted d-block mb-3">{{ subject.area_label }} · {{ subject.completed_tasks }}/{{ subject.total_tasks }} tarefas concluídas</small>
 
-                <small class="text-muted">Matéria oficial do ENEM</small>
+                                <div class="d-flex align-items-center justify-content-between gap-2">
+                                    <small class="text-muted">Matéria oficial ou personalizada</small>
+                                    <div class="btn-group btn-group-sm" role="group" aria-label="Ações de {{ subject.nome }}">
+                                        <a href="{{ url_for('subjects.edit', id=subject.id) }}" class="btn btn-outline-secondary" title="Editar matéria" aria-label="Editar matéria">
+                                            <i class="bi bi-pencil" aria-hidden="true"></i>
+                                        </a>
+                                        <a href="{{ url_for('subjects.delete', id=subject.id) }}" class="btn btn-outline-danger" title="Excluir matéria" aria-label="Excluir matéria">
+                                            <i class="bi bi-trash" aria-hidden="true"></i>
+                                        </a>
+                                    </div>
+                                </div>
             </div>
         </div>
     </div>

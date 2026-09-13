@@ -9,7 +9,53 @@
     </div>
     <div>
         <a href="{{ url_for('questions.list_questions') }}" class="btn btn-outline-primary btn-sm">Questões</a>
-        <a href="{{ url_for('performance.overview') }}" class="btn btn-primary btn-sm">Atualizar</a>
+        <form method="POST" action="{{ url_for('performance.refresh_knowledge') }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Atualizar
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small" for="perf-subject">Matéria</label>
+                <select id="perf-subject" name="subject" class="form-select form-select-sm" data-auto-submit>
+                    <option value="">Todas</option>
+                    {% for subject in subjects %}
+                    <option value="{{ subject.id }}" {% if filter_subject == subject.id %}selected{% endif %}>{{ subject.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small" for="perf-area">Área</label>
+                <select id="perf-area" name="area" class="form-select form-select-sm" data-auto-submit>
+                    <option value="all" {% if filter_area == 'all' %}selected{% endif %}>Todas</option>
+                    {% for key, label in area_options %}
+                    <option value="{{ key }}" {% if filter_area == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small" for="perf-periodo">Período</label>
+                <select id="perf-periodo" name="periodo" class="form-select form-select-sm" data-auto-submit>
+                    <option value="all" {% if filter_periodo == 'all' %}selected{% endif %}>Todo o período</option>
+                    <option value="7d" {% if filter_periodo == '7d' %}selected{% endif %}>Últimos 7 dias</option>
+                    <option value="30d" {% if filter_periodo == '30d' %}selected{% endif %}>Últimos 30 dias</option>
+                    <option value="90d" {% if filter_periodo == '90d' %}selected{% endif %}>Últimos 90 dias</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2 align-items-end">
+                <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+                <a href="{{ url_for('performance.overview') }}" class="btn btn-outline-secondary btn-sm">Limpar</a>
+            </div>
+        </form>
+        {% if filter_subject or filter_area != 'all' or filter_periodo != 'all' %}
+        <div class="mt-2"><span class="badge bg-info text-dark">Filtro ativo</span> <a href="{{ url_for('performance.overview') }}" class="small">Limpar filtros</a></div>
+        {% endif %}
     </div>
 </div>
 
@@ -34,6 +80,13 @@
         <strong class="text-danger">{{ overall.wrong }}</strong>
         <small>respostas incorretas</small>
     </div>
+    {% if avg_time is not none %}
+    <div class="insight-card">
+        <span class="insight-label">Tempo médio</span>
+        <strong>{{ avg_time }}s</strong>
+        <small>por questão recente</small>
+    </div>
+    {% endif %}
 </div>
 
 {% if best_subject and worst_subject %}
@@ -115,6 +168,13 @@
         <div class="chart-frame"><canvas id="chartAreaPerformance" aria-label="Gráfico de desempenho por área"></canvas></div>
     </section>
     {% endif %}
+    {% if evolution %}
+    <section class="chart-card">
+        <h3>Evolução do aproveitamento</h3>
+        <p>Aproveitamento acumulado nas últimas {{ evolution|length }} tentativas.</p>
+        <div class="chart-frame"><canvas id="chartEvolution" aria-label="Gráfico de evolução do aproveitamento"></canvas></div>
+    </section>
+    {% endif %}
 </div>
 
 <div class="card mb-4">
@@ -130,6 +190,8 @@
                     <th>Acertos</th>
                     <th>Erros</th>
                     <th>Aproveitamento</th>
+                    <th>Domínio</th>
+                    <th>Ações</th>
                 </tr>
             </thead>
             <tbody>
@@ -151,6 +213,8 @@
                             <strong>{{ stat.accuracy }}%</strong>
                         </div>
                     </td>
+                    <td>{% if stat.mastery is not none %}{{ stat.mastery }}%{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                    <td><a href="{{ url_for('questions.list_questions', subject=stat.subject_id) }}" class="btn btn-outline-primary btn-sm">Ver questões</a></td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -173,6 +237,8 @@
                     <th>Questões</th>
                     <th>Acertos</th>
                     <th>Aproveitamento</th>
+                    <th>Domínio</th>
+                    <th>Tendência</th>
                 </tr>
             </thead>
             <tbody>
@@ -190,6 +256,8 @@
                             <strong>{{ stat.accuracy }}%</strong>
                         </div>
                     </td>
+                    <td>{% if stat.mastery is not none %}{{ stat.mastery }}%{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                    <td>{% if stat.trend %}<span class="badge bg-light text-dark border">{{ stat.trend }}</span>{% else %}<span class="text-muted">-</span>{% endif %}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -246,7 +314,7 @@
 {% endblock %}
 
 {% block extra_js %}
-{% if subject_stats %}
+{% if subject_stats or evolution %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -290,6 +358,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 options: {
                     responsive: true,
                     plugins: { legend: { position: 'right' } }
+                }
+            });
+        }
+    }
+
+    var evolutionData = {{ evolution | tojson }};
+    if (evolutionData && evolutionData.length > 0) {
+        var ctxEvo = document.getElementById('chartEvolution');
+        if (ctxEvo) {
+            new Chart(ctxEvo, {
+                type: 'line',
+                data: {
+                    labels: evolutionData.map(function(_, i) { return (i + 1) + 'ª'; }),
+                    datasets: [{
+                        label: 'Aproveitamento acumulado %',
+                        data: evolutionData,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59,130,246,0.15)',
+                        fill: true,
+                        tension: 0.25
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, max: 100, ticks: { callback: function(v) { return v + '%'; } } } }
                 }
             });
         }

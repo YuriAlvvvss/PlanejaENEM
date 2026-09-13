@@ -97,22 +97,75 @@ def delete_topic(id):
 def list_questions():
     filter_subject = request.args.get("subject", type=int)
     filter_topic = request.args.get("topic", type=int)
-    questions = get_user_questions(current_user.id, subject_id=filter_subject, topic_id=filter_topic)
+    filter_status = (request.args.get("status") or "all").strip().lower()
+    if filter_status not in {"all", "pending", "done"}:
+        filter_status = "all"
+    filter_dificuldade = request.args.get("dificuldade", type=int)
+    if filter_dificuldade is not None and filter_dificuldade not in {1, 2, 3, 4, 5}:
+        filter_dificuldade = None
+    search_query = (request.args.get("q") or "").strip() or None
+    page = request.args.get("page", default=1, type=int) or 1
+    per_page = request.args.get("per_page", default=20, type=int) or 20
+    page = max(1, page)
+    per_page = min(50, max(5, per_page))
+
+    questions = get_user_questions(
+        current_user.id,
+        subject_id=filter_subject,
+        topic_id=filter_topic,
+        dificuldade=filter_dificuldade,
+        search=search_query,
+    )
     subjects = Subject.query.filter_by(user_id=current_user.id).order_by(Subject.nome).all()
     topics = get_user_topics(current_user.id, subject_id=filter_subject)
     attempt_map = get_attempts_map(current_user.id, [q.id for q in questions])
     pending_questions = [q for q in questions if q.id not in attempt_map]
     answered_questions = [q for q in questions if q.id in attempt_map]
+
+    if filter_status == "pending":
+        visible_questions = pending_questions
+    elif filter_status == "done":
+        visible_questions = answered_questions
+    else:
+        visible_questions = questions
+
+    total = len(visible_questions)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = min(page, total_pages)
+    start = (page - 1) * per_page
+    end = start + per_page
+    paginated_questions = visible_questions[start:end]
+    paginated_ids = {q.id for q in paginated_questions}
+    paginated_pending = [q for q in pending_questions if q.id in paginated_ids]
+    paginated_answered = [q for q in answered_questions if q.id in paginated_ids]
+    # Quando há filtro de status, a página contém só aquele grupo;
+    # caso contrário, divide a página entre pendentes/concluídas.
+    if filter_status == "pending":
+        paginated_pending = paginated_questions
+        paginated_answered = []
+    elif filter_status == "done":
+        paginated_pending = []
+        paginated_answered = paginated_questions
+
     return render_template(
         "questions/list.html",
-        questions=questions,
-        pending_questions=pending_questions,
-        answered_questions=answered_questions,
+        questions=paginated_questions,
+        total_questions=total,
+        pending_questions=paginated_pending,
+        answered_questions=paginated_answered,
+        pending_count=len(pending_questions),
+        answered_count=len(answered_questions),
         subjects=subjects,
         topics=topics,
         filter_subject=filter_subject,
         filter_topic=filter_topic,
+        filter_status=filter_status,
+        filter_dificuldade=filter_dificuldade,
+        search_query=search_query or "",
         attempt_map=attempt_map,
+        page=page,
+        per_page=per_page,
+        total_pages=total_pages,
     )
 
 
@@ -206,6 +259,7 @@ def answer_question(id):
                 question_id=id,
                 resposta=form.resposta.data,
                 tempo_segundos=elapsed_seconds,
+                commit=False,
             )
         except (IntegrityError, ValueError):
             db.session.rollback()
@@ -264,11 +318,14 @@ def answer_question(id):
             flash(f"Resposta incorreta. A resposta correta é {question.resposta_correta}.", "danger")
 
         if question.topic_id:
-            try:
-                from app.performance.services import update_knowledge_state
-                update_knowledge_state(current_user.id, question.topic_id)
-            except Exception:
-                pass
+            from app.performance.services import update_knowledge_state
+            update_knowledge_state(
+                current_user.id,
+                question.topic_id,
+                commit=False,
+            )
+
+        db.session.commit()
 
         return render_template(
             "questions/view.html",

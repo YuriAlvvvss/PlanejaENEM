@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Avaliação Adaptativa - PlanejaENEM{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="eyebrow">Avaliação adaptativa</div>
+        <h2>Sua avaliação</h2>
+    </div>
+    <a href="{{ url_for('performance.overview') }}" class="btn btn-outline-primary btn-sm">Ver desempenho</a>
+</div>
+
+{% if ks_count == 0 %}
+<div class="workspace-empty">
+    <h5>Responda questões para desbloquear a avaliação</h5>
+    <p>A avaliação precisa do seu domínio por assunto para calibrar a dificuldade inicial.</p>
+    <a href="{{ url_for('questions.list_questions') }}" class="btn btn-primary">Responder questões</a>
+</div>
+{% else %}
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="eyebrow">Nova avaliação</div>
+        <form method="POST" action="{{ url_for('assessment.start_web') }}" class="row g-2 align-items-end">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="col-md-3">
+                <label class="form-label small" for="target">Questões (5-30)</label>
+                <select id="target" name="target_questions" class="form-select form-select-sm">
+                    <option value="5">5 questões</option>
+                    <option value="10" selected>10 questões</option>
+                    <option value="15">15 questões</option>
+                    <option value="20">20 questões</option>
+                    <option value="30">30 questões</option>
+                </select>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label small" for="subject">Matéria (opcional)</label>
+                <select id="subject" name="subject_id" class="form-select form-select-sm">
+                    <option value="">Todas as matérias</option>
+                    {% for subject in subjects %}
+                    <option value="{{ subject.id }}">{{ subject.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary">Iniciar avaliação</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% if digest and (digest.overdue > 0 or digest.reviews > 0) %}
+<div class="alert alert-warning d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+        <strong>Resumo de estudos:</strong>
+        {% if digest.overdue > 0 %}{{ digest.overdue }} tarefa(s) atrasada(s){% endif %}{% if digest.overdue > 0 and digest.reviews > 0 %} · {% endif %}{% if digest.reviews > 0 %}{{ digest.reviews }} revisão(ões) devida(s){% endif %}.
+    </div>
+    <a href="{{ url_for('tasks.list_tasks', periodo='atrasadas') }}" class="btn btn-outline-dark btn-sm">Ver tarefas</a>
+</div>
+{% endif %}
+
+{% if active %}
+<div class="card mb-4 border-primary">
+    <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <div class="eyebrow">Em andamento</div>
+            <h5 class="mb-1">Avaliação #{{ active.id }} — {{ active.current_question_number }}/{{ active.target_questions }}</h5>
+            <small class="text-muted">Dificuldade atual {{ active.current_difficulty }} · {{ active.accuracy }}% de acerto</small>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('assessment.play', assessment_id=active.id) }}" class="btn btn-primary btn-sm">Continuar</a>
+            <form method="POST" action="{{ url_for('assessment.abandon', assessment_id=active.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline-secondary btn-sm">Abandonar</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if assessments or filter_status != 'all' %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 class="mb-0">Últimas avaliações{% if total is defined %} ({{ total }}){% endif %}</h5>
+        <form method="GET" class="d-flex gap-2 align-items-end">
+            <div>
+                <label class="form-label small mb-0" for="hist-status">Status</label>
+                <select id="hist-status" name="status" class="form-select form-select-sm" data-auto-submit>
+                    <option value="all" {% if filter_status == 'all' %}selected{% endif %}>Todas</option>
+                    <option value="active" {% if filter_status == 'active' %}selected{% endif %}>Ativas</option>
+                    <option value="completed" {% if filter_status == 'completed' %}selected{% endif %}>Concluídas</option>
+                    <option value="abandoned" {% if filter_status == 'abandoned' %}selected{% endif %}>Abandonadas</option>
+                </select>
+            </div>
+            <a href="{{ url_for('assessment.index') }}" class="btn btn-outline-secondary btn-sm">Limpar</a>
+        </form>
+    </div>
+    {% if assessments %}
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead><tr><th>#</th><th>Status</th><th>Progresso</th><th>Acertos</th><th>Ações</th></tr></thead>
+            <tbody>
+                {% for a in assessments %}
+                <tr>
+                    <td>{{ a.id }}</td>
+                    <td><span class="badge bg-light text-dark border">{{ a.status }}</span></td>
+                    <td>{{ a.current_question_number }}/{{ a.target_questions }}</td>
+                    <td>{{ a.accuracy }}%</td>
+                    <td>
+                        {% if a.status == 'active' %}
+                        <a href="{{ url_for('assessment.play', assessment_id=a.id) }}" class="btn btn-outline-primary btn-sm">Continuar</a>
+                        {% else %}
+                        <a href="{{ url_for('assessment.result', assessment_id=a.id) }}" class="btn btn-outline-secondary btn-sm">Ver resultado</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if total_pages is defined and total_pages > 1 %}
+    <div class="card-body">
+        <nav aria-label="Paginação de avaliações">
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('assessment.index', status=filter_status, page=page-1, per_page=per_page) }}">Anterior</a>
+                </li>
+                <li class="page-item disabled"><span class="page-link">Página {{ page }} de {{ total_pages }}</span></li>
+                <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('assessment.index', status=filter_status, page=page+1, per_page=per_page) }}">Próxima</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="card-body">
+        <p class="text-muted mb-0">Nenhuma avaliação com este filtro. <a href="{{ url_for('assessment.index') }}">Limpar filtros</a>.</p>
+    </div>
+    {% endif %}
+</div>
+{% elif ks_count > 0 %}
+<div class="workspace-empty">
+    <h5>Nenhuma avaliação ainda</h5>
+    <p>Inicie sua primeira avaliação adaptativa acima.</p>
+</div>
+{% endif %}
+{% endblock %}

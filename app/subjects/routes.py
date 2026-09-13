@@ -1,4 +1,4 @@
-from flask import abort, flash, redirect, render_template, request, url_for
+from flask import flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.authz import get_user_subject
@@ -22,12 +22,17 @@ def list_subjects():
 @subjects_bp.route("/new", methods=["GET", "POST"])
 @login_required
 def create():
-    abort(404)
     form = SubjectForm()
     if form.validate_on_submit():
         area = form.area.data or "outro"
         if area == "outro":
             area = infer_area(form.nome.data)
+        if Subject.query.filter_by(
+            user_id=current_user.id,
+            nome=form.nome.data,
+        ).first():
+            flash("Você já possui uma matéria com esse nome.", "warning")
+            return render_template("subjects/form.html", form=form, title="Nova Matéria")
         subject = Subject(
             nome=form.nome.data,
             cor=form.cor.data,
@@ -47,11 +52,18 @@ def create():
 @subjects_bp.route("/<int:id>/edit", methods=["GET", "POST"])
 @login_required
 def edit(id):
-    abort(404)
     subject = get_user_subject(id)
 
     form = SubjectForm(obj=subject)
     if form.validate_on_submit():
+        duplicate = Subject.query.filter(
+            Subject.user_id == current_user.id,
+            Subject.nome == form.nome.data,
+            Subject.id != subject.id,
+        ).first()
+        if duplicate:
+            flash("Você já possui uma matéria com esse nome.", "warning")
+            return render_template("subjects/form.html", form=form, title="Editar Matéria")
         subject.nome = form.nome.data
         subject.cor = form.cor.data
         subject.prioridade = form.prioridade.data or 3
@@ -67,12 +79,11 @@ def edit(id):
 @subjects_bp.route("/<int:id>/delete", methods=["GET", "POST"])
 @login_required
 def delete(id):
-    abort(404)
     subject = get_user_subject(id)
 
-    if subject.tasks:
+    if subject.tasks or subject.topics or subject.questions or subject.study_sessions:
         flash(
-            "Não é possível excluir matéria com tarefas vinculadas. Remova as tarefas primeiro.",
+            "Não é possível excluir matéria com dados vinculados. Remova ou mova os itens primeiro.",
             "warning",
         )
         return redirect(url_for("subjects.list_subjects"))
