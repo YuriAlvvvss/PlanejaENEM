@@ -2,7 +2,7 @@
 Testes de integração do planner adaptativo - PlanejaENEM Adaptive Planner v2.
 """
 
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 
 import pytest
 
@@ -15,6 +15,7 @@ from app.planner.services import (
     get_subject_performance,
     process_planner_request,
     replan_after_missed_sessions,
+    build_planner_view,
 )
 from app.planner.spaced_repetition import get_review_status
 
@@ -283,6 +284,80 @@ class TestPlannerRoutes:
         client.post("/auth/login", data={"email": "test@example.com", "senha": "Senha123"})
         response = client.get("/planner/")
         assert response.status_code == 200
+
+    def test_planner_view_builds_summary_and_filters_sessions(
+        self, app, sample_user, sample_subjects
+    ):
+        plan = StudyPlan(
+            user_id=sample_user.id,
+            exam_date=date.today() + timedelta(days=30),
+            available_days="seg,qua",
+            available_hours="08:00-10:00",
+            is_active=True,
+        )
+        db.session.add(plan)
+        db.session.flush()
+        db.session.add_all(
+            [
+                StudySession(
+                    plan_id=plan.id,
+                    user_id=sample_user.id,
+                    subject_id=sample_subjects[0].id,
+                    session_date=date.today(),
+                    start_time=time(8),
+                    end_time=time(9),
+                    duration_minutes=60,
+                    completed=True,
+                    status="completed",
+                ),
+                StudySession(
+                    plan_id=plan.id,
+                    user_id=sample_user.id,
+                    subject_id=sample_subjects[1].id,
+                    session_date=date.today() + timedelta(days=1),
+                    start_time=time(8),
+                    end_time=time(9),
+                    duration_minutes=60,
+                ),
+            ]
+        )
+        db.session.commit()
+
+        view = build_planner_view(plan, view_mode="today", status="completed")
+
+        assert view["summary"]["total_sessions"] == 2
+        assert view["summary"]["completed_minutes"] == 60
+        assert len(view["sessions"]) == 1
+        assert view["sessions"][0].subject_id == sample_subjects[0].id
+
+    def test_planner_week_opens_next_scheduled_week(self, app, sample_user, sample_subjects):
+        plan = StudyPlan(
+            user_id=sample_user.id,
+            exam_date=date.today() + timedelta(days=30),
+            available_days="seg",
+            available_hours="08:00-10:00",
+            is_active=True,
+        )
+        db.session.add(plan)
+        db.session.flush()
+        next_week = date.today() + timedelta(days=(7 - date.today().weekday()))
+        db.session.add(
+            StudySession(
+                plan_id=plan.id,
+                user_id=sample_user.id,
+                subject_id=sample_subjects[0].id,
+                session_date=next_week,
+                start_time=time(8),
+                end_time=time(9),
+                duration_minutes=60,
+            )
+        )
+        db.session.commit()
+
+        view = build_planner_view(plan, view_mode="week")
+
+        assert view["sessions"]
+        assert view["sessions"][0].session_date == next_week
 
     def test_planner_post_creates_plan(self, client, sample_user, sample_subjects):
         client.post("/auth/login", data={"email": "test@example.com", "senha": "Senha123"})

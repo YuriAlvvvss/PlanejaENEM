@@ -150,6 +150,108 @@ def get_subject_need_data(
     }
 
 
+def build_planner_view(
+    plan: Optional[StudyPlan],
+    view_mode: str = "week",
+    anchor_date: Optional[date] = None,
+    subject_id: Optional[int] = None,
+    status: str = "all",
+) -> dict:
+    """Prepara os dados da agenda sem transferir regras de exibicao para Jinja."""
+    today = date.today()
+    anchor_date = anchor_date or today
+    view_mode = view_mode if view_mode in {"today", "week", "list"} else "week"
+    status = status if status in {"all", "pending", "completed", "missed"} else "all"
+
+    all_sessions = list(plan.sessions) if plan else []
+    planned_minutes = sum(session.duration_minutes or 0 for session in all_sessions)
+    completed_sessions = [session for session in all_sessions if session.completed]
+    completed_minutes = sum(session.duration_minutes or 0 for session in completed_sessions)
+    missed_sessions = [session for session in all_sessions if session.is_missed]
+    pending_sessions = [
+        session for session in all_sessions if not session.completed and not session.is_missed
+    ]
+
+    if view_mode == "today":
+        period_start = anchor_date
+        period_end = anchor_date
+        period_label = "Hoje" if anchor_date == today else anchor_date.strftime("%d/%m/%Y")
+    elif view_mode == "week":
+        period_start = anchor_date - timedelta(days=anchor_date.weekday())
+        period_end = period_start + timedelta(days=6)
+        if plan and not any(period_start <= session.session_date <= period_end for session in all_sessions):
+            upcoming_date = next(
+                (
+                    session.session_date
+                    for session in sorted(all_sessions, key=lambda item: item.session_date)
+                    if session.session_date >= today
+                ),
+                None,
+            )
+            if upcoming_date:
+                period_start = upcoming_date - timedelta(days=upcoming_date.weekday())
+                period_end = period_start + timedelta(days=6)
+        period_label = f"{period_start.strftime('%d/%m')} - {period_end.strftime('%d/%m/%Y')}"
+    else:
+        period_start = today
+        period_end = None
+        period_label = "Todas as sessões"
+
+    visible_sessions = []
+    for session in all_sessions:
+        if subject_id and session.subject_id != subject_id:
+            continue
+        if status == "completed" and not session.completed:
+            continue
+        if status == "pending" and (session.completed or session.is_missed):
+            continue
+        if status == "missed" and not session.is_missed:
+            continue
+        if period_end and not (period_start <= session.session_date <= period_end):
+            continue
+        visible_sessions.append(session)
+
+    visible_sessions.sort(key=lambda item: (item.session_date, item.start_time, item.id))
+    sessions_by_day = []
+    for session in visible_sessions:
+        if not sessions_by_day or sessions_by_day[-1]["date"] != session.session_date:
+            sessions_by_day.append({
+                "date": session.session_date,
+                "label": session.day_name,
+                "sessions": [],
+            })
+        sessions_by_day[-1]["sessions"].append(session)
+
+    next_session = next(
+        (
+            session
+            for session in sorted(all_sessions, key=lambda item: (item.session_date, item.start_time, item.id))
+            if not session.completed and not session.is_missed and session.session_date >= today
+        ),
+        None,
+    )
+
+    progress_percent = round((completed_minutes / planned_minutes) * 100) if planned_minutes else 0
+    return {
+        "view_mode": view_mode,
+        "period_label": period_label,
+        "period_start": period_start,
+        "period_end": period_end,
+        "sessions": visible_sessions,
+        "sessions_by_day": sessions_by_day,
+        "next_session": next_session,
+        "summary": {
+            "total_sessions": len(all_sessions),
+            "completed_sessions": len(completed_sessions),
+            "pending_sessions": len(pending_sessions),
+            "missed_sessions": len(missed_sessions),
+            "planned_minutes": planned_minutes,
+            "completed_minutes": completed_minutes,
+            "progress_percent": progress_percent,
+        },
+    }
+
+
 def generate_adaptive_plan(
     user_id: int,
     days: list[str],

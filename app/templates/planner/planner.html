@@ -4,10 +4,41 @@
 {% block content %}
 <div class="page-header mb-4">
     <div>
-        <div class="eyebrow">Planejamento Adaptativo</div>
+        <div class="eyebrow">Planejamento adaptativo</div>
         <h2>Cronograma de estudos</h2>
     </div>
+    {% if active_plan %}
+    <div class="planner-header-meta">
+        <span class="planner-phase"><i class="bi bi-flag"></i> Plano ativo</span>
+        <span class="text-muted small">Prova em {{ (active_plan.exam_date - today).days if active_plan.exam_date >= today else 0 }} dias</span>
+    </div>
+    {% endif %}
 </div>
+
+{% if active_plan %}
+<section class="planner-summary-grid mb-4" aria-label="Resumo do cronograma">
+    <div class="planner-stat planner-stat--primary">
+        <span class="planner-stat-icon"><i class="bi bi-check2-circle"></i></span>
+        <div><span class="planner-stat-label">Progresso</span><strong>{{ planner_view.summary.progress_percent }}%</strong></div>
+        <div class="planner-progress" aria-hidden="true"><span style="width: {{ planner_view.summary.progress_percent }}%"></span></div>
+    </div>
+    <div class="planner-stat">
+        <span class="planner-stat-icon"><i class="bi bi-clock"></i></span>
+        <div><span class="planner-stat-label">Tempo estudado</span><strong>{{ planner_view.summary.completed_minutes }} min</strong></div>
+        <small>de {{ planner_view.summary.planned_minutes }} min</small>
+    </div>
+    <div class="planner-stat">
+        <span class="planner-stat-icon"><i class="bi bi-calendar2-week"></i></span>
+        <div><span class="planner-stat-label">Sessões</span><strong>{{ planner_view.summary.completed_sessions }}/{{ planner_view.summary.total_sessions }}</strong></div>
+        <small>{{ planner_view.summary.pending_sessions }} pendentes</small>
+    </div>
+    <div class="planner-stat {% if planner_view.summary.missed_sessions %}planner-stat--danger{% endif %}">
+        <span class="planner-stat-icon"><i class="bi bi-exclamation-circle"></i></span>
+        <div><span class="planner-stat-label">Atenção</span><strong>{{ planner_view.summary.missed_sessions }}</strong></div>
+        <small>sessões atrasadas</small>
+    </div>
+</section>
+{% endif %}
 
 <div class="row g-4">
     <div class="col-lg-5">
@@ -74,111 +105,103 @@
     </div>
 
     <div class="col-lg-7">
-        <div class="card h-100 planner-card">
+        {% if active_plan and planner_view.next_session %}
+        <section class="next-session mb-4" aria-labelledby="next-session-title">
+            <div class="next-session__accent"></div>
+            <div class="next-session__body">
+                <div class="eyebrow">Próxima sessão</div>
+                <h3 id="next-session-title">{{ planner_view.next_session.subject.nome }}</h3>
+                <p class="mb-3">{{ planner_view.next_session.day_name }} · {{ planner_view.next_session.session_date.strftime('%d/%m') }} · {{ planner_view.next_session.start_time.strftime('%H:%M') }} - {{ planner_view.next_session.end_time.strftime('%H:%M') }}</p>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="session-type-badge">{{ planner_view.next_session.session_type|replace('_', ' ')|title }}</span>
+                    <span class="text-muted small">{{ planner_view.next_session.duration_minutes }} min</span>
+                </div>
+            </div>
+            <form method="POST" action="{{ url_for('main.toggle_session', id=planner_view.next_session.id) }}" class="next-session__action">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="next" value="{{ url_for('planner.planner') }}">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check2"></i> Marcar concluída</button>
+            </form>
+        </section>
+        {% endif %}
+
+        <div class="card planner-card">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="planner-agenda-heading">
                     <div>
-                        <div class="eyebrow">📊 Status</div>
-                        <h5 class="card-title mb-0">Cronograma atual</h5>
+                        <div class="eyebrow">Agenda</div>
+                        <h5 class="card-title mb-0">{{ planner_view.period_label }}</h5>
                     </div>
-                    {% if active_plan %}
-                    <form method="POST" action="{{ url_for('planner.regenerate', id=active_plan.id) }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn btn-outline-secondary btn-sm">
-                            <i class="bi bi-arrow-clockwise"></i> Regenerar
-                        </button>
-                    </form>
-                    {% endif %}
+                    <div class="planner-view-switch" role="group" aria-label="Visualização da agenda">
+                        <a class="btn btn-sm {% if planner_view.view_mode == 'today' %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{{ url_for('planner.planner', view='today') }}">Hoje</a>
+                        <a class="btn btn-sm {% if planner_view.view_mode == 'week' %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{{ url_for('planner.planner', view='week') }}">Semana</a>
+                        <a class="btn btn-sm {% if planner_view.view_mode == 'list' %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{{ url_for('planner.planner', view='list') }}">Lista</a>
                     </div>
+                </div>
 
                 {% if active_plan and active_plan.sessions %}
-                <div class="table-responsive">
-                    <table class="table table-sm align-middle table-hover">
-                        <thead>
-                            <tr>
-                                <th>📅 Data</th>
-                                <th>📚 Disciplina</th>
-                                <th>📖 Tipo</th>
-                                <th>🕐 Horário</th>
-                                <th>⏱️ Duração</th>
-                                <th>✏️ Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for session in active_plan.sessions|sort(attribute='session_date') %}
-                            <tr class="session-row {% if session.completed %}table-success{% elif session.is_missed %}table-danger{% endif %}">
-                                <td>
-                                    {{ session.session_date.strftime('%d/%m/%Y') }}
-                                    {% if session.is_missed %}
-                                    <span class="badge bg-danger ms-1" style="font-size: 0.6rem;">PERDIDA</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <span class="badge" style="background-color: {{ session.subject.cor }}; color: white;">
-                                        {{ session.subject.nome }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge bg-{% if session.session_type == 'teoria' %}info{% elif session.session_type == 'exercicios' %}primary{% elif session.session_type == 'questoes_enem' %}success{% elif session.session_type == 'revisao' %}warning{% else %}dark{% endif %}">
-                                        {% if session.session_type == 'teoria' %}
-                                        📖 Teoria
-                                        {% elif session.session_type == 'exercicios' %}
-                                        ✏️ Exercícios
-                                        {% elif session.session_type == 'questoes_enem' %}
-                                        🎯 Questões ENEM
-                                        {% elif session.session_type == 'revisao' %}
-                                        🔄 Revisão
-                                        {% else %}
-                                        📝 Simulado
-                                        {% endif %}
-                                    </span>
-                                </td>
-                                <td>{{ session.start_time.strftime('%H:%M') }} - {{ session.end_time.strftime('%H:%M') }}</td>
-                                <td>{{ session.duration_minutes }} min</td>
-                                <td>
-                                    <div class="d-flex gap-2 align-items-center flex-wrap">
-                                    <form method="POST" action="{{ url_for('planner.update_manual', id=session.id) }}" class="d-flex gap-2 align-items-center">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <select class="form-select form-select-sm" name="subject_id">
-                                            {% for subject in subjects %}
-                                            <option value="{{ subject.id }}" {% if subject.id == session.subject_id %}selected{% endif %}>{{ subject.nome }}</option>
-                                            {% endfor %}
-                                        </select>
-                                        <button type="submit" class="btn btn-outline-primary btn-sm" title="Salvar alterações">
-                                            <i class="bi bi-check"></i>
-                                        </button>
-                                    </form>
-                                    <form method="POST" action="{{ url_for('main.toggle_session', id=session.id) }}" class="d-inline">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <input type="hidden" name="next" value="{{ url_for('planner.planner') }}">
-                                        <button type="submit" class="btn btn-sm {% if session.completed %}btn-success{% else %}btn-outline-success{% endif %}" title="{% if session.completed %}Reabrir sessão{% else %}Marcar como estudada{% endif %}">
-                                            <i class="bi {% if session.completed %}bi-check2-circle{% else %}bi-circle{% endif %}"></i>
-                                        </button>
-                                    </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                <form method="GET" class="planner-filters mb-4">
+                    <input type="hidden" name="view" value="{{ planner_view.view_mode }}">
+                    <label class="visually-hidden" for="planner-status">Status</label>
+                    <select class="form-select form-select-sm" id="planner-status" name="status">
+                        <option value="all" {% if request.args.get('status', 'all') == 'all' %}selected{% endif %}>Todos os status</option>
+                        <option value="pending" {% if request.args.get('status') == 'pending' %}selected{% endif %}>Pendentes</option>
+                        <option value="completed" {% if request.args.get('status') == 'completed' %}selected{% endif %}>Concluídas</option>
+                        <option value="missed" {% if request.args.get('status') == 'missed' %}selected{% endif %}>Atrasadas</option>
+                    </select>
+                    <label class="visually-hidden" for="planner-subject">Matéria</label>
+                    <select class="form-select form-select-sm" id="planner-subject" name="subject">
+                        <option value="">Todas as matérias</option>
+                        {% for subject in subjects %}
+                        <option value="{{ subject.id }}" {% if request.args.get('subject', type=int) == subject.id %}selected{% endif %}>{{ subject.nome }}</option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="bi bi-funnel"></i> Filtrar</button>
+                </form>
 
-                <div class="mt-3 pt-3 border-top">
-                    <div class="row text-center">
-                        <div class="col-4">
-                            <div class="small text-muted">Total de sessões</div>
-                            <div class="fw-bold">{{ active_plan.sessions|length }}</div>
+                {% if planner_view.sessions_by_day %}
+                <div class="planner-agenda">
+                    {% for day in planner_view.sessions_by_day %}
+                    <section class="agenda-day {% if day.date == today %}agenda-day--today{% endif %}">
+                        <header class="agenda-day__header">
+                            <div><strong>{{ day.label }}</strong><span>{{ day.date.strftime('%d/%m/%Y') }}</span></div>
+                            <span class="small text-muted">{{ day.sessions|length }} sessão(ões)</span>
+                        </header>
+                        <div class="agenda-day__sessions">
+                            {% for session in day.sessions %}
+                            <article class="agenda-session {% if session.completed %}is-completed{% elif session.is_missed %}is-missed{% endif %}">
+                                <div class="agenda-session__time">{{ session.start_time.strftime('%H:%M') }}<span>{{ session.duration_minutes }} min</span></div>
+                                <div class="agenda-session__main">
+                                    <div class="agenda-session__title"><strong>{{ session.subject.nome }}</strong>{% if session.is_missed %}<span class="status-pill status-pill--danger">Atrasada</span>{% elif session.completed %}<span class="status-pill status-pill--success">Concluída</span>{% else %}<span class="status-pill">Planejada</span>{% endif %}</div>
+                                    <div class="agenda-session__meta"><span>{{ session.session_type|replace('_', ' ')|title }}</span>{% if session.priority_score %}<span>Prioridade {{ session.priority_score }}</span>{% endif %}</div>
+                                </div>
+                                <div class="agenda-session__actions">
+                                    <form method="POST" action="{{ url_for('main.toggle_session', id=session.id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="next" value="{{ url_for('planner.planner', view=planner_view.view_mode) }}">
+                                        <button type="submit" class="btn btn-sm {% if session.completed %}btn-success{% else %}btn-outline-success{% endif %}" title="{% if session.completed %}Reabrir sessão{% else %}Marcar como concluída{% endif %}"><i class="bi {% if session.completed %}bi-check2-circle{% else %}bi-circle{% endif %}"></i><span class="visually-hidden">{% if session.completed %}Reabrir{% else %}Concluir{% endif %} sessão</span></button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('planner.update_manual', id=session.id) }}" class="agenda-session__edit">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <label class="visually-hidden" for="subject-{{ session.id }}">Matéria da sessão</label>
+                                        <select id="subject-{{ session.id }}" name="subject_id" class="form-select form-select-sm">
+                                            {% for subject in subjects %}<option value="{{ subject.id }}" {% if subject.id == session.subject_id %}selected{% endif %}>{{ subject.nome }}</option>{% endfor %}
+                                        </select>
+                                        <button type="submit" class="btn btn-sm btn-outline-primary" title="Salvar matéria"><i class="bi bi-check"></i><span class="visually-hidden">Salvar matéria</span></button>
+                                    </form>
+                                </div>
+                            </article>
+                            {% endfor %}
                         </div>
-                        <div class="col-4">
-                            <div class="small text-muted">Concluídas</div>
-                            <div class="fw-bold text-success">{{ active_plan.sessions|selectattr('completed')|list|length }}</div>
-                        </div>
-                        <div class="col-4">
-                            <div class="small text-muted">Horas totais</div>
-                            <div class="fw-bold">{{ (active_plan.sessions|sum(attribute='duration_minutes') / 60)|round(1) }}h</div>
-                        </div>
-                    </div>
+                    </section>
+                    {% endfor %}
                 </div>
+                {% else %}
+                <div class="workspace-empty">
+                    <h6><i class="bi bi-funnel"></i> Nenhuma sessão encontrada</h6>
+                    <p class="mb-0">Ajuste os filtros ou escolha outro período.</p>
+                </div>
+                {% endif %}
                 {% else %}
                 <div class="workspace-empty">
                     <h6><i class="bi bi-calendar-event"></i> Nenhum cronograma gerado</h6>

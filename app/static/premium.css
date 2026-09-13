@@ -79,6 +79,340 @@
     transform: translateY(-2px);
 }
 
+/* Planner workspace */
+.planner-header-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.planner-phase,
+.session-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid rgba(91, 164, 255, 0.24);
+    border-radius: 999px;
+    padding: 0.35rem 0.65rem;
+    color: var(--primary);
+    background: var(--primary-soft);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.planner-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.85rem;
+}
+
+.planner-stat {
+    position: relative;
+    min-height: 104px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-content: center;
+    gap: 0.2rem 0.75rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--panel);
+    box-shadow: var(--shadow-card);
+}
+
+.planner-stat--primary {
+    border-color: rgba(91, 164, 255, 0.3);
+    background: linear-gradient(135deg, rgba(91, 164, 255, 0.16), var(--panel));
+}
+
+.planner-stat--danger {
+    border-color: rgba(255, 106, 122, 0.3);
+}
+
+.planner-stat-icon {
+    grid-row: span 2;
+    display: grid;
+    place-items: center;
+    width: 2.3rem;
+    height: 2.3rem;
+    border-radius: 10px;
+    color: var(--primary);
+    background: var(--primary-soft);
+    font-size: 1.1rem;
+}
+
+.planner-stat-label {
+    display: block;
+    color: var(--muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.planner-stat strong {
+    display: block;
+    color: var(--text);
+    font-size: 1.25rem;
+}
+
+.planner-stat small {
+    grid-column: 2;
+    color: var(--muted);
+    font-size: 0.75rem;
+}
+
+.planner-progress {
+    grid-column: 1 / -1;
+    height: 0.3rem;
+    overflow: hidden;
+    margin-top: 0.45rem;
+    border-radius: 999px;
+    background: var(--grid);
+}
+
+.planner-progress span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--primary);
+}
+
+.next-session {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    overflow: hidden;
+    border: 1px solid rgba(91, 164, 255, 0.28);
+    border-radius: var(--radius);
+    background: linear-gradient(120deg, rgba(91, 164, 255, 0.16), var(--panel));
+    box-shadow: var(--shadow-card);
+}
+
+.next-session__accent {
+    width: 0.35rem;
+    flex: 0 0 0.35rem;
+    background: var(--primary);
+}
+
+.next-session__body {
+    flex: 1;
+    padding: 1.25rem 1.35rem;
+}
+
+.next-session h3 {
+    margin: 0.2rem 0 0.25rem;
+    font-size: 1.35rem;
+}
+
+.next-session p {
+    color: var(--muted-strong);
+}
+
+.next-session__action {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+}
+
+.planner-agenda-heading,
+.planner-filters,
+.agenda-day__header,
+.agenda-session__title,
+.agenda-session__meta {
+    display: flex;
+    align-items: center;
+}
+
+.planner-agenda-heading {
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.planner-view-switch {
+    display: inline-flex;
+    gap: 0.25rem;
+}
+
+.planner-filters {
+    gap: 0.5rem;
+    padding: 0.65rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--panel-soft);
+}
+
+.planner-filters .form-select {
+    max-width: 12rem;
+}
+
+.agenda-day {
+    margin-top: 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--panel-soft);
+    overflow: hidden;
+}
+
+.agenda-day--today {
+    border-color: rgba(91, 164, 255, 0.4);
+}
+
+.agenda-day__header {
+    justify-content: space-between;
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.agenda-day__header div {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+}
+
+.agenda-day__header span {
+    color: var(--muted);
+    font-size: 0.78rem;
+}
+
+.agenda-session {
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.2s ease;
+}
+
+.agenda-session:last-child {
+    border-bottom: 0;
+}
+
+.agenda-session:hover {
+    background: var(--primary-soft);
+}
+
+.agenda-session.is-completed {
+    opacity: 0.68;
+}
+
+.agenda-session.is-missed {
+    border-left: 3px solid var(--danger);
+}
+
+.agenda-session__time {
+    color: var(--text);
+    font-weight: 800;
+}
+
+.agenda-session__time span {
+    display: block;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 500;
+}
+
+.agenda-session__title {
+    gap: 0.55rem;
+    flex-wrap: wrap;
+}
+
+.agenda-session__meta {
+    gap: 0.8rem;
+    margin-top: 0.25rem;
+    color: var(--muted);
+    font-size: 0.78rem;
+}
+
+.status-pill {
+    display: inline-flex;
+    padding: 0.18rem 0.45rem;
+    border-radius: 999px;
+    color: var(--muted-strong);
+    background: var(--grid);
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+.status-pill--success {
+    color: var(--success);
+    background: rgba(61, 214, 140, 0.12);
+}
+
+.status-pill--danger {
+    color: var(--danger);
+    background: rgba(255, 106, 122, 0.12);
+}
+
+.agenda-session__actions,
+.agenda-session__edit {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.agenda-session__edit .form-select {
+    width: 9rem;
+}
+
+@media (max-width: 991.98px) {
+    .planner-summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 575.98px) {
+    .planner-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .planner-agenda-heading,
+    .planner-filters,
+    .next-session {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .planner-filters .form-select,
+    .planner-filters .btn {
+        max-width: none;
+        width: 100%;
+    }
+
+    .next-session__action {
+        padding: 0 1.35rem 1.25rem;
+    }
+
+    .next-session__action .btn {
+        width: 100%;
+    }
+
+    .agenda-session {
+        grid-template-columns: 4.25rem minmax(0, 1fr);
+        gap: 0.65rem;
+    }
+
+    .agenda-session__actions {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+    }
+
+    .agenda-session__edit .form-select {
+        width: 10rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .agenda-session,
+    .planner-card,
+    .page-header {
+        animation: none;
+        transition: none;
+    }
+}
+
 /* Days Selector Premium */
 .day-selector {
     display: flex;

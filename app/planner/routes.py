@@ -23,6 +23,7 @@ from app.planner.services import (
     replan_after_missed_sessions,
     get_diagnostics,
     get_subject_need_data,
+    build_planner_view,
 )
 
 
@@ -34,6 +35,12 @@ def planner():
     existing_plan = StudyPlan.query.filter_by(user_id=current_user.id, is_active=True).order_by(
         StudyPlan.generated_at.desc()
     ).first()
+    planner_view = build_planner_view(
+        existing_plan,
+        view_mode=request.args.get("view", "week"),
+        subject_id=request.args.get("subject", type=int),
+        status=request.args.get("status", "all"),
+    )
 
     if request.method == "POST":
         result, errors = process_planner_request(
@@ -49,6 +56,8 @@ def planner():
                 "planner/planner.html",
                 subjects=subjects,
                 active_plan=existing_plan,
+                planner_view=planner_view,
+                today=date.today(),
                 mode="form",
             )
 
@@ -61,6 +70,8 @@ def planner():
                 "planner/planner.html",
                 subjects=subjects,
                 active_plan=existing_plan,
+                planner_view=planner_view,
+                today=date.today(),
                 mode="form",
             )
 
@@ -138,6 +149,8 @@ def planner():
         "planner/planner.html",
         subjects=subjects,
         active_plan=existing_plan,
+        planner_view=planner_view,
+        today=date.today(),
         mode="form",
     )
 
