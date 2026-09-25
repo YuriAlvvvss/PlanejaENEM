@@ -5,8 +5,47 @@ Centraliza todas as variáveis de ambiente relacionadas à IA.
 A configuração é carregada uma vez e imutável após a criação.
 """
 
+import logging
 import os
 from dataclasses import dataclass
+from urllib.parse import urlparse
+
+logger = logging.getLogger(__name__)
+
+DEFAULT_AI_BASE_URL = "https://openrouter.ai/api/v1"
+
+
+def _allowed_ai_hosts() -> set[str]:
+    hosts = {"openrouter.ai"}
+    extra = os.environ.get("AI_ALLOWED_HOSTS", "").strip()
+    if extra:
+        for part in extra.split(","):
+            host = part.strip().lower().lstrip(".")
+            if host:
+                hosts.add(host)
+    return hosts
+
+
+def sanitize_ai_base_url(raw: str | None) -> str:
+    """Valida AI_BASE_URL contra SSRF. Retorna URL segura ou fallback."""
+    candidate = (raw or "").strip().rstrip("/")
+    if not candidate:
+        return DEFAULT_AI_BASE_URL
+    try:
+        parsed = urlparse(candidate)
+    except ValueError:
+        logger.warning("AI_BASE_URL inválida, usando fallback seguro")
+        return DEFAULT_AI_BASE_URL
+    if parsed.scheme != "https":
+        logger.warning("AI_BASE_URL bloqueada (scheme!=https): %s", parsed.scheme)
+        return DEFAULT_AI_BASE_URL
+    hostname = (parsed.hostname or "").lower()
+    if not hostname or hostname not in _allowed_ai_hosts():
+        logger.warning("AI_BASE_URL bloqueada (host não permitido)")
+        return DEFAULT_AI_BASE_URL
+    if parsed.username or parsed.password:
+        return DEFAULT_AI_BASE_URL
+    return candidate
 
 
 @dataclass(frozen=True)
@@ -32,7 +71,8 @@ class AIConfig:
     max_questions_per_request: int = 5
     max_questions_per_hour: int = 20
 
-    # Custos estimados por 1K tokens (OpenRouter gpt-4o-mini)
+    # Custos estimados por 1K tokens (conservador; modelo :free tem custo 0,
+    # sobrescreva via AI_COST_PER_1K_*_TOKENS se necessário)
     cost_per_1k_input_tokens: float = 0.00015
     cost_per_1k_output_tokens: float = 0.0006
 
@@ -94,12 +134,12 @@ def load_ai_config() -> AIConfig:
     model = os.environ.get("OPENROUTER_MODEL", "").strip()
     structured_model = os.environ.get("OPENROUTER_STRUCTURED_MODEL", "").strip()
     if not structured_model and model == "openrouter/free":
-        structured_model = "openai/gpt-4o-mini"
+        structured_model = "nvidia/nemotron-3-ultra:free"
 
     return AIConfig(
         enabled=_parse_bool(os.environ.get("AI_ENABLED"), default=False),
         api_key=os.environ.get("OPENROUTER_API_KEY", "").strip(),
-        base_url=os.environ.get("AI_BASE_URL", "https://openrouter.ai/api/v1").strip(),
+        base_url=sanitize_ai_base_url(os.environ.get("AI_BASE_URL", DEFAULT_AI_BASE_URL)),
         model=model,
         structured_model=structured_model,
         timeout=_parse_float(os.environ.get("AI_TIMEOUT"), default=30.0),

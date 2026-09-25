@@ -23,7 +23,7 @@
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Matéria</label>
+                    <label class="form-label fw-bold" for="aiSubject">Matéria</label>
                     <select id="aiSubject" class="form-select">
                         <option value="">Selecione uma matéria</option>
                         {% for subject in subjects %}
@@ -32,7 +32,7 @@
                     </select>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Assunto (opcional)</label>
+                    <label class="form-label fw-bold" for="aiTopic">Assunto (opcional)</label>
                     <select id="aiTopic" class="form-select">
                         <option value="">Todos</option>
                         {% for topic in topics %}
@@ -41,21 +41,21 @@
                     </select>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Quantidade</label>
+                    <label class="form-label fw-bold" for="aiQuantity">Quantidade</label>
                     <select id="aiQuantity" class="form-select">
                         <option value="1">1 questão</option>
                         <option value="3">3 questões</option>
                         <option value="5">5 questões</option>
                     </select>
                 </div>
-                <div id="aiError" class="alert alert-danger d-none"></div>
-                <div id="aiLoading" class="text-center d-none">
-                    <div class="spinner-border text-primary" role="status">
+                <div id="aiError" class="alert alert-danger d-none" role="alert" aria-live="assertive"></div>
+                <div id="aiLoading" class="text-center d-none" role="status" aria-live="polite">
+                    <div class="spinner-border text-primary" role="status" aria-hidden="true">
                         <span class="visually-hidden">Gerando...</span>
                     </div>
-                    <p class="mt-2 mb-0">Gerando questões com IA...</p>
+                    <p class="mt-2 mb-0">Gerando questões com IA... não feche esta janela.</p>
                 </div>
-                <div id="aiResult" class="d-none">
+                <div id="aiResult" class="d-none" role="status" aria-live="polite">
                     <div class="alert alert-success">
                         <span id="aiResultCount"></span> questão(ões) gerada(s) com sucesso!
                     </div>

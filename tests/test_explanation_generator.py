@@ -33,7 +33,7 @@ def _enabled_config(**kwargs) -> AIConfig:
     defaults = dict(
         enabled=True,
         api_key="test-key",
-        model="openai/gpt-4o-mini",
+        model="nvidia/nemotron-3-ultra:free",
         max_retries=0,
         timeout=5.0,
     )
@@ -86,7 +86,7 @@ def _make_structured_response(data: dict) -> MagicMock:
     """Cria StructuredChatResponse simulado."""
     resp = MagicMock()
     resp.data = data
-    resp.model = "openai/gpt-4o-mini"
+    resp.model = "nvidia/nemotron-3-ultra:free"
     resp.usage = MagicMock()
     resp.usage.prompt_tokens = 50
     resp.usage.completion_tokens = 200

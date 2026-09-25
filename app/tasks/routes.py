@@ -194,8 +194,25 @@ def recommend():
 @tasks_bp.route("/recommend/confirm", methods=["POST"])
 @login_required
 def confirm_recommendation():
-    """Persiste uma recomendacao somente apos confirmacao explicita."""
+    """Persiste uma recomendacao somente apos confirmacao explicita.
+
+    Idempotência opt-in (anti-duplo-clique): envie `Idempotency-Key` (header)
+    ou `idempotency_key` (JSON). Sem chave, comportamento inalterado.
+    Com chave repetida na mesma sessão, retorna o task_id original.
+    """
     data = request.get_json(silent=True) or {}
+    idempotency_key = request.headers.get("Idempotency-Key") or data.get("idempotency_key")
+    if isinstance(idempotency_key, str):
+        idempotency_key = idempotency_key.strip()[:64]
+    else:
+        idempotency_key = None
+    if idempotency_key:
+        seen = session.get("_task_idempotency", {})
+        if idempotency_key in seen:
+            task_id = seen[idempotency_key]
+            task = Task.query.filter_by(id=task_id, user_id=current_user.id).first()
+            if task is not None:
+                return jsonify({"success": True, "task_id": task.id, "deduplicated": True}), 200
     title = (data.get("title") or "").strip()
     description = (data.get("description") or "").strip()
     subject_id = data.get("subject_id")
@@ -223,6 +240,11 @@ def confirm_recommendation():
     )
     db.session.add(task)
     db.session.commit()
+    if idempotency_key:
+        seen = session.get("_task_idempotency", {})
+        # Teto: guarda só as últimas 20 chaves por sessão.
+        seen[idempotency_key] = task.id
+        session["_task_idempotency"] = dict(list(seen.items())[-20:])
     return jsonify({"success": True, "task_id": task.id}), 201
 
 

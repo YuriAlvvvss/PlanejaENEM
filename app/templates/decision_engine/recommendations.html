@@ -4,6 +4,8 @@
 
 {% block content %}
 <div class="container mt-4">
+    <nav class="crumb-nav" aria-label="Navegação"><a href="{{ url_for('main.dashboard') }}">Dashboard</a> / O que estudar agora?</nav>
+    <div class="eyebrow">Decision Engine</div>
     <h1 class="mb-4">O que estudar agora?</h1>
     
     {% if summary %}

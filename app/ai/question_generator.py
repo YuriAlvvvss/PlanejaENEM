@@ -113,6 +113,42 @@ class QuestionGenerator:
         elapsed = time.monotonic() - entry.created_at
         return elapsed < self._config.cache_ttl_seconds
 
+    def _db_count_recent(self, user_id: str) -> int:
+        """Camada distribuída: conta ai_usage question_generation na última hora."""
+        try:
+            try:
+                uid = int(user_id)
+            except (TypeError, ValueError):
+                return 0
+            from datetime import datetime, timedelta, timezone
+
+            from flask import has_app_context
+
+            if not has_app_context():
+                return 0
+            from app.ai.models import AIUsage
+            from app.extensions import db
+
+            cutoff = datetime.now(timezone.utc) - timedelta(hours=1)
+            return int(
+                db.session.query(AIUsage)
+                .filter(
+                    AIUsage.user_id == uid,
+                    AIUsage.feature == "question_generation",
+                    AIUsage.created_at >= cutoff,
+                )
+                .count()
+                or 0
+            )
+        except Exception:
+            try:
+                from app.extensions import db
+
+                db.session.rollback()
+            except Exception:
+                pass
+            return 0
+
     def _check_hourly_limit(self, user_id: str) -> bool:
         """Verifica se usuário atingiu limite horário. Retorna True se pode prosseguir."""
         now = time.monotonic()
@@ -125,7 +161,10 @@ class QuestionGenerator:
             t for t in self._hourly_usage[user_id] if t > cutoff
         ]
 
-        return len(self._hourly_usage[user_id]) < self._config.max_per_hour
+        if len(self._hourly_usage[user_id]) >= self._config.max_per_hour:
+            return False
+        # Distribuído: outro worker/container pode ter consumido a cota.
+        return self._db_count_recent(user_id) < self._config.max_per_hour
 
     def _record_hourly_usage(self, user_id: str, count: int) -> None:
         """Registra uso horário."""
@@ -287,7 +326,8 @@ class QuestionGenerator:
         cutoff = now - 3600
         usage = self._hourly_usage.get(user_id, [])
         usage = [t for t in usage if t > cutoff]
-        return max(0, self._config.max_per_hour - len(usage))
+        effective = max(len(usage), self._db_count_recent(user_id))
+        return max(0, self._config.max_per_hour - effective)
 
     def __repr__(self) -> str:
         return (

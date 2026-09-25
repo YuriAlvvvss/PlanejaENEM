@@ -201,7 +201,7 @@ def main():
         "--models",
         type=str,
         required=True,
-        help="Lista de modelos separados por vírgula (ex: 'openrouter/free,openai/gpt-4o-mini')",
+        help="Lista de modelos separados por vírgula (ex: 'nvidia/nemotron-3-ultra:free')",
     )
     parser.add_argument(
         "--tasks",

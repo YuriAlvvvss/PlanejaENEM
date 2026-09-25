@@ -216,17 +216,26 @@ def diagnostics():
 
 @planner_bp.route("/review", methods=["POST"])
 @login_required
+@limiter.limit("20/minute")
 def generate_review():
     """Gera revisão personalizada para um tópico via IA."""
     import logging
     logger = logging.getLogger(__name__)
 
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"success": False, "error": "Corpo da requisição inválido"}), 400
     topic_id = data.get("topic_id")
     duration_minutes = data.get("duration_minutes", 10)
 
-    if not topic_id:
-        return jsonify({"success": False, "error": "topic_id é obrigatório"}), 400
+    if isinstance(topic_id, bool) or not isinstance(topic_id, int) or topic_id <= 0:
+        return jsonify({"success": False, "error": "topic_id inválido"}), 400
+    try:
+        duration_minutes = int(duration_minutes)
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "duration_minutes inválido"}), 400
+    if duration_minutes < 5 or duration_minutes > 120:
+        return jsonify({"success": False, "error": "duration_minutes deve estar entre 5 e 120"}), 400
 
     from app.performance.models import KnowledgeState
     from app.models import Topic
@@ -260,7 +269,7 @@ def generate_review():
             confidence=confidence,
             weak_concepts=weak_concepts,
             recent_errors=recent_errors,
-            duration_minutes=int(duration_minutes),
+            duration_minutes=duration_minutes,
         )
         review = current_app.review_generator.generate(inp)
 
@@ -276,6 +285,27 @@ def generate_review():
             },
         }), 200
 
+    except ValueError as exc:
+        message = str(exc)
+        if "Limite horário" in message:
+            return jsonify({"success": False, "error": message}), 429
+        return jsonify({"success": False, "error": "Parâmetros inválidos"}), 400
     except Exception as exc:
-        logger.warning("Erro ao gerar revisão: %s", exc)
-        return jsonify({"success": False, "error": str(exc)}), 500
+        from app.ai.exceptions import (
+            AIDisabledError,
+            AIConfigurationError,
+            AIRateLimitError,
+            AIProviderError,
+            AIValidationError,
+            AITimeoutError,
+        )
+        if isinstance(exc, AIRateLimitError):
+            logger.warning("Rate limit IA em /planner/review")
+            return jsonify({"success": False, "error": "Limite do provedor de IA atingido. Tente novamente mais tarde."}), 429
+        if isinstance(exc, (AIDisabledError, AIConfigurationError)):
+            return jsonify({"success": False, "error": "IA não está disponível"}), 503
+        if isinstance(exc, (AIProviderError, AIValidationError, AITimeoutError)):
+            logger.warning("Erro IA em /planner/review: %s", type(exc).__name__)
+            return jsonify({"success": False, "error": "Não foi possível gerar a revisão agora. Tente novamente."}), 502
+        logger.exception("Erro inesperado em /planner/review")
+        return jsonify({"success": False, "error": "Erro interno ao gerar revisão."}), 500

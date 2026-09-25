@@ -54,7 +54,7 @@ def ai_config():
     return AIConfig(
         enabled=True,
         api_key="test-key",
-        model="openai/gpt-4o-mini",
+        model="nvidia/nemotron-3-ultra:free",
         max_retries=0,
         timeout=5.0,
         cost_per_1k_input_tokens=0.00015,
@@ -662,7 +662,7 @@ class TestAIUsageModel:
             usage = AIUsage(
                 user_id=1,
                 feature="explanation",
-                model="openai/gpt-4o-mini",
+                model="nvidia/nemotron-3-ultra:free",
                 prompt_version="1.0",
                 input_tokens=100,
                 output_tokens=50,
@@ -683,7 +683,7 @@ class TestAIUsageModel:
             usage = AIUsage(
                 user_id=1,
                 feature="explanation",
-                model="openai/gpt-4o-mini",
+                model="nvidia/nemotron-3-ultra:free",
                 input_tokens=100,
                 output_tokens=50,
                 total_tokens=150,
@@ -704,7 +704,7 @@ class TestAIUsageModel:
         with app.app_context():
             usage = AIUsage(
                 feature="explanation",
-                model="openai/gpt-4o-mini",
+                model="nvidia/nemotron-3-ultra:free",
                 total_tokens=150,
                 status="success",
             )

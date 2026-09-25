@@ -4,6 +4,8 @@
 
 {% block content %}
 <div class="container mt-4">
+    <nav class="crumb-nav" aria-label="Navegação"><a href="{{ url_for('main.dashboard') }}">Dashboard</a> / <a href="{{ url_for('decision_engine.recommendations') }}">Recomendações</a> / Simular</nav>
+    <div class="eyebrow">Decision Engine</div>
     <h1 class="mb-4">Simular Planos de Estudo</h1>
     
     <div class="alert alert-info">
@@ -19,6 +21,7 @@
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ url_for('decision_engine.simulate') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
                             <label for="plan_a_daily" class="form-label">Minutos por dia</label>
                             <input type="number" class="form-control" id="plan_a_daily" 

@@ -8,3 +8,15 @@ services:
     volumes:
       - ./instance:/app/instance
     restart: unless-stopped
+    # Produção multi-worker: descomente redis + RATELIMIT_STORAGE_URI abaixo.
+    # depends_on:
+    #   - redis
+    # environment:
+    #   - RATELIMIT_STORAGE_URI=redis://redis:6379/0
+  # redis:
+  #   image: redis:7-alpine
+  #   restart: unless-stopped
+  #   volumes:
+  #     - redis-data:/app/redis
+# volumes:
+#   redis-data:

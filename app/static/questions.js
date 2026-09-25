@@ -19,6 +19,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const setError = (message) => {
         errorPanel.textContent = message;
         errorPanel.classList.remove("d-none");
+        // A11y: move foco para o erro + oferece retry via re-habilitar botão.
+        try { errorPanel.setAttribute("tabindex", "-1"); errorPanel.focus({ preventScroll: false }); } catch (e) { /* sem foco */ }
     };
 
     const clearMessages = () => {
@@ -54,11 +56,14 @@ document.addEventListener("DOMContentLoaded", () => {
         generateButton.disabled = true;
 
         try {
+            const csrfToken = generateButton.dataset.csrfToken
+                || document.querySelector('meta[name="csrf-token"]')?.content
+                || "";
             const response = await fetch(generateButton.dataset.endpoint, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "X-CSRFToken": generateButton.dataset.csrfToken,
+                    "X-CSRFToken": csrfToken,
                 },
                 body: JSON.stringify({
                     subject_id: subjectId,

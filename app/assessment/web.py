@@ -38,14 +38,10 @@ logger = logging.getLogger(__name__)
 
 
 def _get_owned_assessment(assessment_id: int) -> Assessment:
-    assessment = Assessment.query.filter_by(
-        id=assessment_id, user_id=current_user.id
-    ).first()
-    if assessment is None:
-        from flask import abort
+    # Centralizado em app/authz.py (mesmo comportamento: 404 cross-user).
+    from app.authz import get_user_assessment
 
-        abort(404)
-    return assessment
+    return get_user_assessment(assessment_id)
 
 
 def _get_pending_aq(assessment_id: int):

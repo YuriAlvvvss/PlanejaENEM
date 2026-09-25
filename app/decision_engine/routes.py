@@ -9,7 +9,7 @@ from datetime import date, datetime, timedelta, timezone
 from flask import Blueprint, jsonify, request, render_template, redirect, url_for, flash
 from flask_login import current_user, login_required
 
-from app.extensions import db
+from app.extensions import db, limiter
 from app.models import StudyPlan, User
 from app.decision_engine.engine import (
     generate_recommendations,
@@ -155,6 +155,7 @@ def debug():
 
 @decision_engine_bp.route("/simulate", methods=["GET", "POST"])
 @login_required
+@limiter.limit("20/minute")
 def simulate():
     """
     Simula e compara planos de estudo.
@@ -162,10 +163,17 @@ def simulate():
     if request.method == "GET":
         return render_template("decision_engine/simulate.html")
 
-    plan_a_daily = request.form.get("plan_a_daily", 60, type=int)
-    plan_a_weekly = request.form.get("plan_a_weekly", 420, type=int)
-    plan_b_daily = request.form.get("plan_b_daily", 90, type=int)
-    plan_b_weekly = request.form.get("plan_b_weekly", 630, type=int)
+    def _clamp(raw, default, lo, hi):
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            return default
+        return max(lo, min(hi, value))
+
+    plan_a_daily = _clamp(request.form.get("plan_a_daily"), 60, 15, 480)
+    plan_a_weekly = _clamp(request.form.get("plan_a_weekly"), 420, 60, 3000)
+    plan_b_daily = _clamp(request.form.get("plan_b_daily"), 90, 15, 480)
+    plan_b_weekly = _clamp(request.form.get("plan_b_weekly"), 630, 60, 3000)
 
     today = date.today()
 

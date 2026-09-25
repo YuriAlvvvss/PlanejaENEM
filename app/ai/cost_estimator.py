@@ -2,7 +2,8 @@
 Estimativa de custo do AI Gateway - PlanejaENEM 5.0.
 
 Calcula custo estimado em USD por chamada à IA generativa.
-Baseado nos preços do OpenRouter para gpt-4o-mini.
+Baseado nos preços do OpenRouter (modelo :free tem custo 0;
+valores no AIConfig são teto conservador).
 
 REGRA DE OURO: Estimativa aproximada. Custo real depende do provider.
 """

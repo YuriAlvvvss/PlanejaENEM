@@ -44,7 +44,7 @@ def ai_config_enabled():
         enabled=True,
         api_key="test-api-key-12345",
         base_url="https://openrouter.ai/api/v1",
-        model="openai/gpt-4o-mini",
+        model="nvidia/nemotron-3-ultra:free",
         timeout=5.0,
         max_retries=2,
         max_tokens=1024,
@@ -83,7 +83,7 @@ def _simple_request():
     )
 
 
-def _openrouter_response(content="4", model="openai/gpt-4o-mini"):
+def _openrouter_response(content="4", model="nvidia/nemotron-3-ultra:free"):
     """Cria uma resposta simulada do OpenRouter."""
     return {
         "id": "chatcmpl-test123",
@@ -180,7 +180,7 @@ class TestLoadAIConfig:
         with patch.dict(os.environ, {"OPENROUTER_MODEL": "openrouter/free"}, clear=False):
             os.environ.pop("OPENROUTER_STRUCTURED_MODEL", None)
             config = load_ai_config()
-            assert config.structured_model == "openai/gpt-4o-mini"
+            assert config.structured_model == "nvidia/nemotron-3-ultra:free"
 
     def test_timeout_parsing(self):
         """AI_TIMEOUT deve ser parseado corretamente."""
@@ -252,7 +252,7 @@ class TestUsageTracker:
         tracker = UsageTracker()
         tracker.record(
             feature="explanation",
-            model="openai/gpt-4o-mini",
+            model="nvidia/nemotron-3-ultra:free",
             input_tokens=10,
             output_tokens=5,
             total_tokens=15,
@@ -425,7 +425,7 @@ class TestAIClientSuccess:
 
         assert isinstance(response, ChatResponse)
         assert response.content == "4"
-        assert response.model == "openai/gpt-4o-mini"
+        assert response.model == "nvidia/nemotron-3-ultra:free"
         assert response.usage.total_tokens == 15
 
     def test_chat_registra_usage(self):
@@ -883,7 +883,7 @@ class TestUsageTrackerIntegration:
         records = tracker.get_records()
         assert len(records) == 1
         assert records[0].feature == "test_feature"
-        assert records[0].model == "openai/gpt-4o-mini"
+        assert records[0].model == "nvidia/nemotron-3-ultra:free"
         assert records[0].input_tokens == 10
         assert records[0].output_tokens == 5
         assert records[0].total_tokens == 15

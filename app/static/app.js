@@ -121,11 +121,14 @@ document.addEventListener("DOMContentLoaded", () => {
             recommendButton.disabled = true;
             recommendButton.setAttribute("aria-busy", "true");
             try {
+                const csrfToken = recommendButton.dataset.csrfToken
+                    || document.querySelector('meta[name="csrf-token"]')?.content
+                    || "";
                 const response = await fetch(recommendButton.dataset.endpoint, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "X-CSRFToken": recommendButton.dataset.csrfToken,
+                        "X-CSRFToken": csrfToken,
                     },
                     body: JSON.stringify({ available_minutes: 60 }),
                 });
@@ -154,11 +157,16 @@ document.addEventListener("DOMContentLoaded", () => {
         confirmButton.addEventListener("click", async () => {
             if (!currentRecommendation) return;
             confirmButton.disabled = true;
+            if (!currentRecommendation.idempotency_key && window.crypto?.randomUUID) {
+                try { currentRecommendation.idempotency_key = window.crypto.randomUUID(); } catch (e) { /* sem chave */ }
+            }
+            const metaToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
             const response = await fetch(confirmButton.dataset.endpoint, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "X-CSRFToken": confirmButton.dataset.csrfToken,
+                    "X-CSRFToken": confirmButton.dataset.csrfToken || metaToken,
+                    ...(currentRecommendation.idempotency_key ? { "Idempotency-Key": currentRecommendation.idempotency_key } : {}),
                 },
                 body: JSON.stringify(currentRecommendation),
             });
@@ -171,4 +179,22 @@ document.addEventListener("DOMContentLoaded", () => {
             confirmButton.disabled = false;
         });
     }
+
+    // Anti-dupla-submissão genérico (P1-4): desabilita botões submit do form
+    // no primeiro submit. Sem mudar validação; pageshow reabilita (voltar).
+    document.querySelectorAll("form[method]").forEach((form) => {
+        if ((form.getAttribute("method") || "get").toLowerCase() !== "post") return;
+        form.addEventListener("submit", () => {
+            form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach((btn) => {
+                btn.disabled = true;
+                btn.setAttribute("aria-disabled", "true");
+            });
+            window.setTimeout(() => {
+                form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach((btn) => {
+                    // Reabilita se ainda estamos na página (erro de rede/validação).
+                    if (document.contains(btn)) btn.disabled = false;
+                });
+            }, 8000);
+        });
+    });
 });

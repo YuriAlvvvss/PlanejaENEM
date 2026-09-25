@@ -125,6 +125,14 @@ class AIClient:
             )
         if self._http is None:
             raise AIConfigurationError("Cliente HTTP não inicializado.")
+        # Defesa em profundidade contra SSRF: mesmo se AIConfig for
+        # construído manualmente, nunca permitir host arbitrário.
+        from urllib.parse import urlparse
+
+        from app.ai.config import sanitize_ai_base_url
+
+        if self._config.base_url != sanitize_ai_base_url(self._config.base_url):
+            raise AIConfigurationError("AI_BASE_URL não permitida.")
 
     def _build_headers(self) -> dict:
         """Constrói headers para a requisição."""

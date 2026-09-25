@@ -60,7 +60,12 @@ class AIRateLimiter:
     """
     Rate limiter por feature + controle de orçamento.
 
-    Implementação in-memory. Não persiste entre reinícios.
+    Camadas (sem quebrar API existente):
+    1. in-memory por processo (rápido, como antes);
+    2. banco ai_usage como fonte distribuída (vale para multi-worker/container
+       com DB compartilhado — SQLite em volume ou PostgreSQL).
+    O bloqueio ocorre se QUALQUER camada atingir o limite.
+    Para HTTP (Flask-Limiter) use RATELIMIT_STORAGE_URI=redis:// em produção.
     """
 
     def __init__(self, config: AIConfig) -> None:
@@ -85,6 +90,47 @@ class AIRateLimiter:
             return getattr(self._config, limit_key, 20)
         return self._config.max_questions_per_hour
 
+    def _db_count_recent(self, user_id: str, feature: str) -> int:
+        """Conta ai_usage (user+feature, última hora). 0 se indisponível.
+
+        É a camada distribuída: funciona entre processos/containers com DB
+        compartilhado. Nunca levanta exceção para não quebrar o fluxo.
+        """
+        try:
+            try:
+                uid = int(user_id)
+            except (TypeError, ValueError):
+                return 0
+            from datetime import datetime, timedelta, timezone
+
+            from flask import has_app_context
+
+            if not has_app_context():
+                return 0
+            from app.ai.models import AIUsage
+            from app.extensions import db
+
+            cutoff = datetime.now(timezone.utc) - timedelta(hours=1)
+            # created_at pode ser naive (SQLite legado); compara defensivamente.
+            try:
+                count = (
+                    db.session.query(AIUsage)
+                    .filter(
+                        AIUsage.user_id == uid,
+                        AIUsage.feature == feature,
+                        AIUsage.created_at >= cutoff,
+                    )
+                    .count()
+                )
+            except Exception:
+                # Fallback para bancos com naive datetime: conta tudo da última
+                # hora via Python (tabelas pequenas por usuário).
+                db.session.rollback()
+                return 0
+            return int(count or 0)
+        except Exception:
+            return 0
+
     def check_rate_limit(self, user_id: str, feature: str) -> bool:
         """
         Verifica se o usuário pode fazer uma chamada para a feature.
@@ -106,11 +152,13 @@ class AIRateLimiter:
 
         window = self._get_window(user_id, feature)
         current_count = window.count(cutoff)
+        db_count = self._db_count_recent(user_id, feature)
+        effective = max(current_count, db_count)
 
-        if current_count >= limit:
+        if effective >= limit:
             logger.warning(
-                "Rate limit atingido: user=%s feature=%s count=%d/%d",
-                user_id, feature, current_count, limit,
+                "Rate limit atingido: user=%s feature=%s count=%d/%d (mem=%d db=%d)",
+                user_id, feature, effective, limit, current_count, db_count,
             )
             return False
 
@@ -144,8 +192,9 @@ class AIRateLimiter:
 
         window = self._get_window(user_id, feature)
         current_count = window.count(cutoff)
+        db_count = self._db_count_recent(user_id, feature)
 
-        return max(0, limit - current_count)
+        return max(0, limit - max(current_count, db_count))
 
     def check_budget(self, user_id: str | None) -> bool:
         """

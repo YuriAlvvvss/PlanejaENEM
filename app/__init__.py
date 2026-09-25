@@ -4,7 +4,7 @@ import sqlite3
 from datetime import timedelta
 from logging.handlers import RotatingFileHandler
 
-from flask import Flask, request
+from flask import Flask, render_template, request
 
 from app.extensions import csrf, db, limiter, login_manager
 
@@ -314,6 +314,38 @@ def create_app(config_name=None):
     login_manager.login_message = "Faça login para acessar esta página."
     login_manager.login_message_category = "warning"
     login_manager.session_protection = "strong"
+
+    # Proxy confiável (ex.: nginx/Heroku/Render): só ativa com opt-in explícito
+    # para não forjar IP/esquema. Ex.: TRUST_PROXY=1 em produção atrás de proxy.
+    if os.environ.get("TRUST_PROXY", "").strip().lower() in {"1", "true", "yes", "on"}:
+        from werkzeug.middleware.proxy_fix import ProxyFix
+
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+
+    # Aviso operacional: memory:// não distribui entre workers/containers.
+    _storage = os.environ.get("RATELIMIT_STORAGE_URI", "memory://")
+    if _storage.startswith("memory://") and (os.environ.get("FLASK_ENV") or "").lower() == "production":
+        app.logger.warning(
+            "RATELIMIT_STORAGE_URI=memory:// em produção: use redis:// para multi-worker"
+        )
+
+    @app.errorhandler(404)
+    def handle_404(_exc):
+        from flask import jsonify
+
+        # API/JSON → JSON genérico; HTML → template 404 sem detalhes internos.
+        if request.path.startswith(("/assessment", "/questions/generate", "/tasks/recommend", "/planner/review", "/decision-engine/api")) or request.accept_mimetypes.best == "application/json":
+            return jsonify({"success": False, "error": "Recurso não encontrado"}), 404
+        return render_template("errors/404.html") if os.path.exists(os.path.join(app.root_path, "templates", "errors", "404.html")) else ("Página não encontrada", 404)
+
+    @app.errorhandler(500)
+    def handle_500(_exc):
+        from flask import jsonify
+
+        app.logger.exception("Erro interno não tratado")
+        if request.path.startswith(("/assessment", "/questions/generate", "/tasks/recommend", "/planner/review", "/decision-engine/api")) or request.accept_mimetypes.best == "application/json":
+            return jsonify({"success": False, "error": "Erro interno. Tente novamente."}), 500
+        return render_template("errors/500.html") if os.path.exists(os.path.join(app.root_path, "templates", "errors", "500.html")) else ("Erro interno. Tente novamente.", 500)
 
     setup_logging(app)
 

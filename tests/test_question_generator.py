@@ -53,7 +53,7 @@ def _make_structured_response(questions: list[dict]) -> MagicMock:
     """Cria StructuredChatResponse simulado."""
     resp = MagicMock()
     resp.data = {"questions": questions}
-    resp.model = "openai/gpt-4o-mini"
+    resp.model = "nvidia/nemotron-3-ultra:free"
     resp.usage = MagicMock()
     resp.usage.prompt_tokens = 50
     resp.usage.completion_tokens = 200
@@ -67,7 +67,7 @@ def _enabled_config(**kwargs) -> AIConfig:
     defaults = dict(
         enabled=True,
         api_key="test-key",
-        model="openai/gpt-4o-mini",
+        model="nvidia/nemotron-3-ultra:free",
         max_retries=0,
         timeout=5.0,
     )
@@ -425,7 +425,7 @@ class TestGeneratedQuestion:
             explanation="Explicação",
             difficulty=2,
             topic="Tópico",
-            model="gpt-4o-mini",
+            model="nvidia/nemotron-3-ultra:free",
             prompt_version="1.0",
         )
         d = q.to_db_dict()
@@ -433,7 +433,7 @@ class TestGeneratedQuestion:
         assert d["alternativa_a"] == "A"
         assert d["resposta_correta"] == "C"
         assert d["dificuldade"] == 2
-        assert "gpt-4o-mini" in d["fonte"]
+        assert "nvidia/nemotron-3-ultra:free" in d["fonte"]
 
     def test_default_validation_status(self):
         """Status padrão deve ser 'pending'."""
@@ -634,7 +634,7 @@ class TestQuestionGenerator:
         with patch.object(client, "chat_structured", return_value=mock_structured):
             results = gen.generate("user1", "mat", "Mat", "Eq", 3, 1)
 
-        assert results[0].model == "openai/gpt-4o-mini"
+        assert results[0].model == "nvidia/nemotron-3-ultra:free"
 
 
 # ---------------------------------------------------------------------------
@@ -920,7 +920,7 @@ class TestIntegrationAIClientGenerator:
         assert len(results) == 2
         for q in results:
             assert q.validation_status == "approved"
-            assert q.model == "openai/gpt-4o-mini"
+            assert q.model == "nvidia/nemotron-3-ultra:free"
             assert q.prompt_version == PROMPT_VERSION
 
     def test_to_db_dict_ready(self):

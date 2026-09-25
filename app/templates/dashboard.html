@@ -24,6 +24,10 @@
         <div>
             <div class="eyebrow">Desempenho e rotina</div>
             <h2>Seu ritmo de estudos</h2>
+            {% if current_recommendation %}
+            <p class="mb-2">Próxima ação: <strong>{{ current_recommendation.subject_name }} → {{ current_recommendation.topic_name }}</strong> ({{ current_recommendation.duration_minutes }} min)</p>
+            <a href="#next-action" class="btn btn-primary">O que estudar agora?</a>
+            {% endif %}
         </div>
         <div class="hero-actions">
             <div class="hero-chip streak-chip" title="Dias seguidos com estudo registrado">
@@ -96,10 +100,11 @@
     </div>
     {% endif %}
 
-    <!-- O que estudar agora? -->
+    <!-- O que estudar agora? (hero próxima-ação P2-2) -->
     {% if current_recommendation %}
-    <div class="card mb-4 border-primary">
+    <div class="card mb-4 border-primary hero-next" id="next-action" tabindex="-1" aria-label="Próxima ação recomendada">
         <div class="card-header bg-primary text-white">
+            <div class="eyebrow text-white-50">Próxima ação recomendada</div>
             <h4 class="mb-0">O que estudar agora?</h4>
         </div>
         <div class="card-body">
@@ -151,12 +156,12 @@
                 <table class="table table-sm">
                     <thead>
                         <tr>
-                            <th>Matéria</th>
-                            <th>Tópico</th>
-                            <th>Área</th>
-                            <th>Domínio</th>
-                            <th>Nível</th>
-                            <th>Tendência</th>
+                            <th scope="col">Matéria</th>
+                            <th scope="col">Tópico</th>
+                            <th scope="col">Área</th>
+                            <th scope="col">Domínio</th>
+                            <th scope="col">Nível</th>
+                            <th scope="col">Tendência</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -199,27 +204,34 @@
     {% endif %}
 
     <div class="chart-grid">
-        <section class="chart-card">
-            <h3>Horas estudadas por semana</h3>
+        <section class="chart-card" aria-labelledby="chart-hours-title">
+            <h3 id="chart-hours-title">Horas estudadas por semana</h3>
             <p>Planejado versus concluído nas últimas 8 semanas.</p>
-            <div class="chart-frame"><canvas id="chartHoursWeek" aria-label="Gráfico de horas por semana"></canvas></div>
+            <div class="chart-frame"><canvas id="chartHoursWeek" role="img" aria-label="Gráfico de horas por semana. Use a alternativa em texto abaixo."></canvas></div>
         </section>
-        <section class="chart-card">
-            <h3>Tempo por matéria</h3>
+        <section class="chart-card" aria-labelledby="chart-subject-title">
+            <h3 id="chart-subject-title">Tempo por matéria</h3>
             <p>Horas concluídas em cada disciplina.</p>
-            <div class="chart-frame"><canvas id="chartTimeSubject" aria-label="Gráfico de tempo por matéria"></canvas></div>
+            <div class="chart-frame"><canvas id="chartTimeSubject" role="img" aria-label="Gráfico de tempo por matéria. Use a alternativa em texto abaixo."></canvas></div>
         </section>
-        <section class="chart-card">
-            <h3>Progresso por área</h3>
+        <section class="chart-card" aria-labelledby="chart-area-title">
+            <h3 id="chart-area-title">Progresso por área</h3>
             <p>Percentual de tarefas concluídas nas áreas do ENEM.</p>
-            <div class="chart-frame"><canvas id="chartAreaProgress" aria-label="Gráfico de progresso por área"></canvas></div>
+            <div class="chart-frame"><canvas id="chartAreaProgress" role="img" aria-label="Gráfico de progresso por área. Use a alternativa em texto abaixo."></canvas></div>
         </section>
-        <section class="chart-card">
-            <h3>Evolução do desempenho</h3>
+        <section class="chart-card" aria-labelledby="chart-evo-title">
+            <h3 id="chart-evo-title">Evolução do desempenho</h3>
             <p>Taxa de conclusão das tarefas com prazo em cada semana.</p>
-            <div class="chart-frame"><canvas id="chartEvolution" aria-label="Gráfico de evolução do desempenho"></canvas></div>
+            <div class="chart-frame"><canvas id="chartEvolution" role="img" aria-label="Gráfico de evolução do desempenho. Use a alternativa em texto abaixo."></canvas></div>
         </section>
     </div>
+    <details class="card mb-4">
+        <summary class="card-body mb-0" style="cursor:pointer">Ver dados dos gráficos em texto</summary>
+        <div class="card-body pt-0">
+            <p class="text-muted mb-2">Horas planejadas: {{ planned_hours_label }} · Concluídas: {{ completed_hours_label }} · Progresso: {{ weekly_progress }}% da meta ({{ goal_hours_label }}).</p>
+            <p class="mb-0"><a href="{{ url_for('performance.overview') }}">Abrir Desempenho com tabela completa</a></p>
+        </div>
+    </details>
 
     {% if total_attempts > 0 %}
     <div class="card mb-4">
@@ -342,10 +354,10 @@
             <table class="table table-hover mb-0 dashboard-table">
                 <thead>
                     <tr>
-                        <th>Matéria</th>
-                        <th>Horário</th>
-                        <th>Duração</th>
-                        <th>Status</th>
+                        <th scope="col">Matéria</th>
+                        <th scope="col">Horário</th>
+                        <th scope="col">Duração</th>
+                        <th scope="col">Status</th>
                     </tr>
                 </thead>
                 <tbody>

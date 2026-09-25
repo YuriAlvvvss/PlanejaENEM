@@ -13,7 +13,7 @@ Todos os endpoints exigem login.
 IDs são validados contra o usuário logado (anti-IDOR).
 """
 
-from flask import jsonify, request
+from flask import jsonify, request, session
 from flask_login import login_required, current_user
 
 from app.assessment import assessment_bp
@@ -44,12 +44,36 @@ def api_start_assessment():
     target_questions = data.get("target_questions", 10)
     subject_id = data.get("subject_id")
 
+    idempotency_key = request.headers.get("Idempotency-Key") or data.get("idempotency_key")
+    if isinstance(idempotency_key, str):
+        idempotency_key = idempotency_key.strip()[:64]
+    else:
+        idempotency_key = None
+    if idempotency_key:
+        seen = session.get("_assessment_idempotency", {})
+        if idempotency_key in seen:
+            from app.assessment.models import Assessment as AssessmentModel
+
+            existing = AssessmentModel.query.filter_by(
+                id=seen[idempotency_key], user_id=current_user.id
+            ).first()
+            if existing is not None:
+                return jsonify({
+                    "success": True,
+                    "assessment": existing.to_dict(),
+                    "deduplicated": True,
+                }), 200
+
     try:
         assessment = start_assessment(
             user_id=current_user.id,
             target_questions=target_questions,
             subject_id=subject_id,
         )
+        if idempotency_key:
+            seen = session.get("_assessment_idempotency", {})
+            seen[idempotency_key] = assessment.id
+            session["_assessment_idempotency"] = dict(list(seen.items())[-20:])
         return jsonify({
             "success": True,
             "assessment": assessment.to_dict(),

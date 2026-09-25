@@ -38,12 +38,12 @@ body[data-theme="light"] {
     --muted-strong: #304966;
     --border: rgba(31, 41, 55, 0.09);
     --grid: rgba(31, 41, 55, 0.08);
-    --primary: #2f80ed;
-    --primary-strong: #2667c7;
-    --primary-soft: rgba(47, 128, 237, 0.12);
+    --primary: #1f6fd6;
+    --primary-strong: #1d5fc2;
+    --primary-soft: rgba(31, 111, 214, 0.12);
     --success: #12a66d;
     --warning: #d49a2c;
-    --danger: #d14b5d;
+    --danger: #b23a4b;
     --shadow-soft: 0 18px 38px rgba(15, 23, 42, 0.08);
     --shadow-card: 0 12px 24px rgba(15, 23, 42, 0.08);
 }
@@ -1575,3 +1575,64 @@ body.density-compact .table td,
 body.density-compact .table th {
     padding: 0.4rem 0.5rem;
 }
+
+/* ===== Design tokens P2 (aditivo; não remove tokens existentes) ===== */
+:root {
+    --font-display: "Sora", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --fs-hero: clamp(1.5rem, 2.5vw + 1rem, 2.1rem);
+    --fs-h3: 1.15rem;
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+}
+
+/* Skip link / landmarks (P2-4 a11y, só aparece no foco) */
+.skip-link {
+    position: absolute;
+    left: 1rem;
+    top: -4rem;
+    z-index: 2000;
+    background: var(--primary);
+    color: #fff;
+    padding: 0.6rem 1rem;
+    border-radius: 0.6rem;
+    transition: top 0.15s ease;
+}
+.skip-link:focus {
+    top: 0.75rem;
+    color: #fff;
+}
+
+/* Hero próxima-ação (P2-2): 1 bloco dominante, sem remover métricas */
+.hero-next {
+    border: 1px solid var(--primary-soft);
+    background: linear-gradient(135deg, var(--primary-soft), transparent 60%), var(--panel);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-card);
+}
+.hero-next h2, .hero-next h3 { font-family: var(--font-display); }
+.hero-next .btn-primary { font-weight: 700; }
+
+/* Skeleton loading + retry (P2-3 estados) */
+.skeleton {
+    border-radius: var(--radius-sm);
+    background: linear-gradient(90deg, var(--panel-strong) 25%, var(--panel-soft) 50%, var(--panel-strong) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.2s infinite linear;
+    min-height: 3.5rem;
+}
+@keyframes skeleton-shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .skeleton, .form-group, .mb-3, .alert { animation: none !important; }
+    html { scroll-behavior: auto; }
+}
+
+/* Breadcrumb unificado Decision Engine/Planner/Desempenho */
+.crumb-nav { font-size: 0.85rem; margin-bottom: var(--space-3); }
+.crumb-nav a { text-decoration: none; }
