@@ -234,8 +234,8 @@ Com IA (OpenRouter):
 ```env
 AI_ENABLED=true
 OPENROUTER_API_KEY=sua-chave
-OPENROUTER_MODEL=openrouter/free
-OPENROUTER_STRUCTURED_MODEL=openai/gpt-4o-mini
+OPENROUTER_MODEL=nvidia/nemotron-3-ultra:free
+OPENROUTER_STRUCTURED_MODEL=nvidia/nemotron-3-ultra:free
 AI_BASE_URL=https://openrouter.ai/api/v1
 AI_TIMEOUT=30
 AI_STRUCTURED_TIMEOUT=12
